@@ -25,6 +25,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent(); demo=isDemo;
         InitializeHealthDashboard();
+        SetPageHeading("overview");
+        OverviewHelpButton.Content=L10n.Language=="en"?"? Help":"? Yardım";
         InitializeWindowBehavior();
         settings=demo ? new() : LocalStore.LoadSettings();
         HourPicker.ItemsSource=Enumerable.Range(0,24).Select(h=>$"{h:00}:00"); HourPicker.SelectedIndex=Math.Clamp(settings.ScheduleHour,0,23);
@@ -97,7 +99,7 @@ public partial class MainWindow : Window
         var f=report.Findings.LastOrDefault(x=>x.Title==title);
         return T(f==null?"Bu taramada kontrol edilmedi":f.Status switch {"Healthy"=>"Sorun bulunmadı","Critical"=>"Bozulma bulundu","Repaired"=>"Onarıldı ve doğrulandı",_=>"Sonuç doğrulanamadı"});
     }
-    private void Page(string page) { OtherPagesScroll.Visibility=page=="overview"?Visibility.Collapsed:Visibility.Visible; AntivirusPanel.Visibility=page=="antivirus"?Visibility.Visible:Visibility.Collapsed; OverviewPanel.Visibility=page=="overview"?Visibility.Visible:Visibility.Collapsed; HistoryPanel.Visibility=page=="history"?Visibility.Visible:Visibility.Collapsed; SettingsPanel.Visibility=page=="settings"?Visibility.Visible:Visibility.Collapsed; UpdatesPanel.Visibility=page=="updates"?Visibility.Visible:Visibility.Collapsed; PageTitle.Text=T(page=="antivirus"?"Antivirüs ve koruma":page=="overview"?"Bilgisayarının durumu":page=="history"?"Rapor geçmişi":page=="updates"?"Güncelleme merkezi":"Bakım ayarları"); }
+    private void Page(string page) { OtherPagesScroll.Visibility=page=="overview"?Visibility.Collapsed:Visibility.Visible; AntivirusPanel.Visibility=page=="antivirus"?Visibility.Visible:Visibility.Collapsed; OverviewPanel.Visibility=page=="overview"?Visibility.Visible:Visibility.Collapsed; HistoryPanel.Visibility=page=="history"?Visibility.Visible:Visibility.Collapsed; SettingsPanel.Visibility=page=="settings"?Visibility.Visible:Visibility.Collapsed; UpdatesPanel.Visibility=page=="updates"?Visibility.Visible:Visibility.Collapsed; SetPageHeading(page); }
     private void WindowsUpdates_Click(object sender,RoutedEventArgs e)=>ShowUpdates("windows");
     private void SoftwareUpdates_Click(object sender,RoutedEventArgs e)=>ShowUpdates("software");
     private void DriverUpdates_Click(object sender,RoutedEventArgs e)=>ShowUpdates("drivers");

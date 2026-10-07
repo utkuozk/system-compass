@@ -52,6 +52,12 @@ public partial class MainWindow
             SetLanguage("en");
             var window=new MainWindow(true);
             try {
+                foreach(var kind in new[]{"windows","software","drivers"}) {
+                    window.updateKind=kind;window.Page("updates");
+                    check(window.PageTitle.Text==(kind=="windows"?"Windows Update":kind=="software"?"Software updates":"Driver updates"),"Update heading identifies selected page: "+kind);
+                }
+                window.Page("overview");
+                check(window.OverviewHelpButton.Content?.ToString()=="? Help" && window.Subtitle.Text.StartsWith("Follow scan"),"Overview has localized help and context after navigation");
                 var report=HealthFixture();window.ShowReport(report);window.HealthTabs.SelectedItem=window.HealthAttentionTab;
                 var content=(FrameworkElement)window.Content;content.Measure(new Size(1000,700));content.Arrange(new Rect(0,0,1000,700));content.UpdateLayout();content.Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);content.UpdateLayout();
                 check(window.OverviewPanel.Parent is Grid && window.OverviewPanel.Parent is not ScrollViewer,"Health overview has bounded layout outside page scrolling");

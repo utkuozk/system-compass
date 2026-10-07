@@ -10,6 +10,7 @@ internal static class SelfTests
         MainWindow.CheckInventoryUi(Check);
         MainWindow.CheckUpdateSelectionUi(Check);
         MainWindow.CheckHealthUi(Check);
+        MainWindow.CheckAndRenderOverviewHelp(Check);
         MainWindow.RenderHealthUiPreview(Path.Combine(AppContext.BaseDirectory,"ui-previews"));
         results.AddRange(ManualRepairTests.Run());
         results.AddRange(UpdateInstallerTests.Run());

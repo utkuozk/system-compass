@@ -6,7 +6,7 @@ Windows health diagnostics, maintenance and selected update management. Built wi
 
 ## Run
 
-Download **System-Compass-Setup-1.10.0.exe** from Releases and follow the Turkish/English installation wizard. The .NET runtime is included: no ZIP extraction or separate runtime installation is required. Open **System Compass** from the desktop or Start menu and remove it through Windows Installed apps. Reports/settings are preserved. Finish maintenance and close the app before setup/removal; setup never forcibly closes workers or restarts Windows. Requires 64-bit Windows 10/11. The installer is unsigned.
+Download **System-Compass-Setup-1.10.1.exe** from Releases and follow the Turkish/English installation wizard. The .NET runtime is included: no ZIP extraction or separate runtime installation is required. Open **System Compass** from the desktop or Start menu and remove it through Windows Installed apps. Reports/settings are preserved. Finish maintenance and close the app before setup/removal; setup never forcibly closes workers or restarts Windows. Requires 64-bit Windows 10/11. The installer is unsigned.
 
 The ZIP is retained only for older in-app updaters and advanced portable use; it requires .NET 8 Desktop Runtime. New users should choose **Setup.exe**. From 1.8, the updater also prefers the verified Setup EXE. The pipeline compiles a self-contained Windows installer; interactive install/upgrade/uninstall remain separate acceptance tests.
 
