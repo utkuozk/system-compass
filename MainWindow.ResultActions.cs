@@ -30,7 +30,7 @@ public partial class MainWindow
     private void RenderRepairAction()
     {
         bool eligible=RepairPolicy.HasActionableFinding(shownReport);
-        RepairButton.IsEnabled=!demo && eligible && !workerRunning && !updateInstalling && !installLaunching && !installQueueRunning && DateTime.UtcNow>=repairPendingUntil;
+        RepairButton.IsEnabled=!demo && eligible && !workerRunning && !healthLaunching && DateTime.UtcNow>=healthLaunchPendingUntil && !updateInstalling && !installLaunching && !installQueueRunning && DateTime.UtcNow>=repairPendingUntil;
         RepairActionDetail.Text=T(eligible?"Bu raporda Windows dosya bozulması bulundu. Onar düğmesi yeni bir kapsamlı doğrulama yapar; bozulma sürüyorsa DISM/SFC ile onarır. Yönetici izni gerekir; otomatik yeniden başlatma yapılmaz.":shownReport==null?"Önce bilgisayar durumunu kontrol edin. Sonuçlara uygun işlemler burada gösterilir.":"Bu raporda düğmeyle onarılabilecek doğrulanmış Windows bozulması yok. Donanım uyarıları, geçmiş olaylar ve belirsiz kontroller otomatik onarılmış sayılmaz. Eksik Windows kontrolleri için kapsamlı taramayı kullanın.");
     }
     private async void Repair_Click(object sender,RoutedEventArgs e)
@@ -40,7 +40,7 @@ public partial class MainWindow
         repairPendingUntil=DateTime.UtcNow.AddMinutes(2);RenderRepairAction();
         try {
             selectedReportId=null;
-            ProgressPanel.Visibility=Visibility.Visible;ProgressText.Text=T("Yönetici izni ve kontrol başlangıcı bekleniyor…");
+            ShowHealthScanStart();
             await Task.Run(()=>App.Elevate("--repair"));
         } catch(Exception ex){repairPendingUntil=DateTime.MinValue;MessageBox.Show(ex.Message,"System Compass");RenderRepairAction();}
     }
@@ -48,7 +48,7 @@ public partial class MainWindow
     {
         if(InstallSelectedButton==null)return;
         var selected=SnapshotUpdateQueue(updateRows);
-        bool busy=installLaunching || updateInstalling || installQueueRunning || workerRunning;
+        bool busy=installLaunching || updateInstalling || installQueueRunning || workerRunning || healthLaunching || DateTime.UtcNow<healthLaunchPendingUntil;
         InstallSelectedButton.Content=F("Seçilileri güncelle ({0})",selected.Length);
         InstallSelectedButton.IsEnabled=!demo && selected.Length>0 && !busy;
         UpdateCheckedCount.Text=F("{0} kayıt seçili",selected.Length);
@@ -131,7 +131,7 @@ public partial class MainWindow
     {
         if(workerRunning)repairPendingUntil=DateTime.MinValue;
         RenderRepairAction();RenderInstallAction();
-        QuickButton.IsEnabled=DeepButton.IsEnabled=!workerRunning && !installLaunching && !updateInstalling;
+        QuickButton.IsEnabled=DeepButton.IsEnabled=!workerRunning && !healthLaunching && DateTime.UtcNow>=healthLaunchPendingUntil && !installLaunching && !updateInstalling && !installQueueRunning;
         _=ReadInstallProgress();
     }
     private async Task ReadInstallProgress()

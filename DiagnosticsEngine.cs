@@ -13,18 +13,22 @@ public sealed class DiagnosticsEngine
     private sealed record CommandResult(int ExitCode, string Output, string Error, bool TimedOut);
     private sealed record Guard(bool Admin, bool AcOnline, bool AcKnown, bool PendingReboot, bool OtherServicing);
 
-    public async Task<ScanReport> RunAsync(bool deep, AppSettings settings, string reportDirectory, Action<string> progress, bool manualRepair = false)
+    public async Task<ScanReport> RunAsync(bool deep, AppSettings settings, string reportDirectory, Action<string> progress, bool manualRepair = false, ScanTracker? tracker = null, Action<ScanProgress>? structuredProgress = null)
     {
         // A user request always verifies current corruption; an old report never authorizes a write.
         deep |= manualRepair;
         var report = new ScanReport { DeepScan = deep, ReportDirectory = Path.GetFullPath(reportDirectory) };
+        bool ownsTracker = tracker == null;
+        tracker ??= new ScanTracker(deep, manualRepair, structuredProgress);
+        tracker.Attach(report);
         Directory.CreateDirectory(report.ReportDirectory);
         LocalStore.Initialize();
         FileStream? scanLock = null;
         try
         {
             try { scanLock = new FileStream(Path.Combine(LocalStore.Root, "scan.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
-            catch (IOException) { Add(report, "Tarama", "Başka tarama çalışıyor", "Unknown", "Bu uygulamanın diğer taraması tamamlandığında yeniden deneyin."); return Complete(report); }
+            catch (IOException) { Add(report, "Tarama", "Başka tarama çalışıyor", "Unknown", "Bu uygulamanın diğer taraması tamamlandığında yeniden deneyin."); tracker.FailActive("Başka tarama çalışıyor; kontroller başlatılmadı."); tracker.SkipPending(new[]{"system-data","dism","sfc","chkdsk","repair-eligibility","dism-repair","sfc-repair","dism-verify","sfc-verify"}, "Başka tarama çalışıyor; kontroller başlatılmadı."); if(ownsTracker) tracker.Stop("Başka tarama çalışıyor; kontroller başlatılmadı.",true); return Complete(report); }
+            tracker.Start("system-data", "Donanım, güç ve son yedi günün olay kayıtları kontrol ediliyor…");
             Say(progress, "Donanım, güç ve son yedi günün olay kayıtları kontrol ediliyor…");
             var collection = await CollectAsync(report.ReportDirectory, false);
             Guard? guard = null;
@@ -59,44 +63,62 @@ public sealed class DiagnosticsEngine
                 }
             }
             catch (Exception ex) { Add(report, "Kontrol", "Sistem verilerinin okunması", "Unknown", ex.Message); }
+            tracker.Finish("system-data", detail: "Donanım, disk, güç ve olay kayıtları birlikte toplandı. Tek tek kontrollerin sonuçları aşağıdaki bulgulardadır.");
 
             var dismState = Integrity.Unknown;
             var sfcState = Integrity.Unknown;
             if (guard?.Admin == true && !guard.OtherServicing)
             {
+                tracker.Start("dism", deep ? "Windows bileşen deposu ayrıntılı taranıyor…" : "Windows bileşen deposunun kayıtlı durumu kontrol ediliyor…");
                 Say(progress, deep ? "Windows bileşen deposu ayrıntılı taranıyor…" : "Windows bileşen deposunun kayıtlı durumu kontrol ediliyor…");
                 var dism = await RunSystemAsync("dism.exe", new[] { "/Online", "/Cleanup-Image", deep ? "/ScanHealth" : "/CheckHealth", "/English" }, "dism-health", report.ReportDirectory, TimeSpan.FromMinutes(45));
                 dismState = dism.TimedOut ? Integrity.Unknown : Dism(dism.Output, dism.ExitCode);
                 AddIntegrity(report, "Windows bileşen deposu", dismState, dism, deep ? "Ayrıntılı DISM taraması." : "Hızlı kontrol yalnızca daha önce kaydedilmiş bozulmayı sorgular; tüm dosyaları taramaz.");
+                tracker.Finish("dism");
                 if (deep)
                 {
+                    tracker.Start("sfc", "Windows sistem dosyaları doğrulanıyor…");
                     Say(progress, "Windows sistem dosyaları doğrulanıyor…");
                     var sfc = await RunSystemAsync("sfc.exe", new[] { "/verifyonly" }, "sfc-verify", report.ReportDirectory, TimeSpan.FromMinutes(45));
                     sfcState = sfc.TimedOut ? Integrity.Unknown : Sfc(sfc.Output, sfc.ExitCode);
                     AddIntegrity(report, "Windows sistem dosyaları", sfcState, sfc, "SFC salt okunur doğrulama.");
+                    tracker.Finish("sfc");
+                    tracker.Start("chkdsk", "C: dosya sistemi salt okunur denetleniyor…");
                     Say(progress, "C: dosya sistemi salt okunur denetleniyor…");
                     var disk = await RunSystemAsync("chkdsk.exe", new[] { "C:" }, "chkdsk-readonly", report.ReportDirectory, TimeSpan.FromMinutes(30));
                     // Without /F or /R, CHKDSK cannot repair. Exit 0 documents success; other results are inconclusive on an active volume.
                     Add(report, "Depolama", "C: dosya sistemi", disk.ExitCode == 0 && !disk.TimedOut ? "Healthy" : "Unknown", disk.ExitCode == 0 && !disk.TimedOut ? "CHKDSK salt okunur denetiminde hata bildirmedi. Etkin sürücüde sonuçlar anlık durumdur." : "Salt okunur CHKDSK kesin sonuç vermedi; etkin birimde geçici tutarsızlık olabilir. " + Failure(disk));
+                    tracker.Finish("chkdsk");
                 }
             }
-            else Add(report, "Windows", "Windows bütünlüğü", "Unknown", guard == null ? "Güvenlik koşulları doğrulanamadı." : !guard.Admin ? "Yönetici yetkisi yok; DISM/SFC çalıştırılmadı." : "Başka bir DISM/SFC işlemi çalışıyor; denetim ertelendi.");
+            else {
+                var reason = guard == null ? "Güvenlik koşulları doğrulanamadı." : !guard.Admin ? "Yönetici yetkisi yok; DISM/SFC çalıştırılmadı." : "Başka bir DISM/SFC işlemi çalışıyor; denetim ertelendi.";
+                Add(report, "Windows", "Windows bütünlüğü", "Unknown", reason);
+                tracker.SkipPending(new[]{"dism","sfc","chkdsk"}, reason);
+            }
+            if (!deep) tracker.SkipPending(new[]{"sfc","chkdsk"}, "Hızlı taramada çalıştırılmaz; ayrıntılı tarama gerekir.");
 
+            tracker.Start("repair-eligibility", "Onarım gereksinimi ve koşulları değerlendiriliyor…");
             if (dismState == Integrity.Unrepairable)
                 Add(report, "Onarım", "Bileşen deposu onarılamıyor", "Critical", "DISM bileşen deposunu onarılamaz olarak bildirdi. Otomatik onarım başlatılmadı; Windows kurtarma seçeneklerini inceleyin.");
             else if (RepairPolicy.HasFreshCorruption(deep, dismState, sfcState))
-                await TryRepairAsync(report, settings, progress, manualRepair);
+                await TryRepairAsync(report, settings, progress, manualRepair, tracker);
             else if (!deep && dismState == Integrity.Corrupt)
                 Add(report, "Onarım", "Ayrıntılı tarama gerekli", "Info", "Hızlı DISM kontrolü kayıtlı bozulma bildirdi. Otomatik onarım için yeni ScanHealth ile ayrıntılı taramada güncel bozulma doğrulanmalıdır.");
             else if (settings.AutoRepair || manualRepair)
                 Add(report, "Onarım", manualRepair ? "İstenen onarım" : "Otomatik onarım", "Info", "Güncel DISM/SFC çıktısında onarılabilir bozulma doğrulanmadığından onarım çalıştırılmadı.");
+            if (tracker.Snapshot().Steps.Single(s=>s.Id=="repair-eligibility").Status=="Running")
+                tracker.Finish("repair-eligibility", dismState==Integrity.Unknown || deep && sfcState==Integrity.Unknown ? "Unknown" : null, "Onarım gereksinimi değerlendirildi; onarım yalnızca güncel bozulma ve güvenlik koşulları doğrulanınca çalışır.");
+            tracker.SkipPending(new[]{"dism-repair","sfc-repair","dism-verify","sfc-verify"}, "Onarım çalıştırılmadı veya önceki onarım adımı doğrulanamadı.");
         }
-        catch (Exception ex) { Add(report, "Tarama", "Tarama tamamlanamadı", "Unknown", ex.Message); }
+        catch (Exception ex) { Add(report, "Tarama", "Tarama tamamlanamadı", "Unknown", ex.Message); tracker.FailActive("Tarama tamamlanamadı: "+ex.Message); tracker.SkipPending(new[]{"system-data","dism","sfc","chkdsk","repair-eligibility","dism-repair","sfc-repair","dism-verify","sfc-verify"}, "Önceki tarama adımı tamamlanamadı."); }
         finally { scanLock?.Dispose(); }
-        return Complete(report);
+        Complete(report);
+        if (ownsTracker) { tracker.SkipPending(new[]{"updates-windows","updates-drivers","updates-software","antivirus","report"}, "Bu denetimin kapsamı dışında."); tracker.Stop(report.Summary); }
+        return report;
     }
 
-    private async Task TryRepairAsync(ScanReport report, AppSettings settings, Action<string> progress, bool manualRepair)
+    private async Task TryRepairAsync(ScanReport report, AppSettings settings, Action<string> progress, bool manualRepair, ScanTracker tracker)
     {
         if (!manualRepair && !settings.AutoRepair) { Add(report, "Onarım", "Onarım kapalı", "Info", "Bozulma doğrulandı; otomatik onarım ayarı kapalı."); return; }
         if (!manualRepair && settings.LastAutoRepairUtc.HasValue && DateTimeOffset.UtcNow - settings.LastAutoRepairUtc.Value < TimeSpan.FromDays(7))
@@ -130,23 +152,33 @@ public sealed class DiagnosticsEngine
         catch (Exception ex) { settings.LastAutoRepairUtc = previous; Add(report, "Onarım", "Onarım kaydı saklanamadı", "Unknown", "Onarım başlatılmadı: " + ex.Message); return; }
         report.RepairAttempted = true;
         LocalStore.SaveReport(report);
+        tracker.Finish("repair-eligibility", "Info", "Güncel bozulma ve onarım koşulları doğrulandı; onarım başlatılıyor.");
+        tracker.Start("dism-repair", "Doğrulanmış bozulma onarılıyor: DISM…");
         Say(progress, "Doğrulanmış bozulma onarılıyor: DISM. Bu işlem tamamlanana kadar uygulama açık kalır…");
         // Repairs deliberately have no cancellation/timeout kill path.
         var restore = await RunSystemAsync("dism.exe", new[] { "/Online", "/Cleanup-Image", "/RestoreHealth", "/NoRestart", "/English" }, "dism-restore", report.ReportDirectory, null);
         if (!DismRepairSucceeded(restore.Output, restore.ExitCode))
         {
             report.RebootRequired |= restore.ExitCode == 3010;
-            Add(report, "Onarım", "DISM onarımı doğrulanamadı", "Unknown", "SFC onarımı başlatılmadı. " + Failure(restore)); return;
+            Add(report, "Onarım", "DISM onarımı doğrulanamadı", "Unknown", "SFC onarımı başlatılmadı. " + Failure(restore)); tracker.Finish("dism-repair"); return;
         }
+        tracker.Finish("dism-repair", "Info", "DISM onarım komutu başarı bildirdi; bütünlük onarım sonrası taramayla doğrulanacak.");
+        tracker.Start("sfc-repair", "Windows sistem dosyaları onarılıyor: SFC…");
         Say(progress, "Windows sistem dosyaları onarılıyor: SFC…");
         var sfc = await RunSystemAsync("sfc.exe", new[] { "/scannow" }, "sfc-repair", report.ReportDirectory, null);
         if (!SfcRepairSucceeded(sfc.Output, sfc.ExitCode)) Add(report, "Onarım", "SFC onarımı doğrulanamadı", "Unknown", Failure(sfc));
+        tracker.Finish("sfc-repair", SfcRepairSucceeded(sfc.Output, sfc.ExitCode)?"Info":"Unknown", SfcRepairSucceeded(sfc.Output, sfc.ExitCode)?"SFC onarım komutu başarı bildirdi; bütünlük yeniden doğrulanacak.":Failure(sfc));
+        tracker.Start("dism-verify", "Onarım sonrası Windows bileşen deposu doğrulanıyor…");
         Say(progress, "Onarım sonrası bileşen deposu ve sistem dosyaları tekrar doğrulanıyor…");
         var verifyDism = await RunSystemAsync("dism.exe", new[] { "/Online", "/Cleanup-Image", "/ScanHealth", "/English" }, "dism-after", report.ReportDirectory, TimeSpan.FromMinutes(45));
-        var verifySfc = await RunSystemAsync("sfc.exe", new[] { "/verifyonly" }, "sfc-after", report.ReportDirectory, TimeSpan.FromMinutes(45));
-        var goodDism = !verifyDism.TimedOut && Dism(verifyDism.Output, verifyDism.ExitCode) == Integrity.Healthy;
-        var goodSfc = !verifySfc.TimedOut && Sfc(verifySfc.Output, verifySfc.ExitCode) == Integrity.Healthy;
+        var afterDism = verifyDism.TimedOut ? Integrity.Unknown : Dism(verifyDism.Output, verifyDism.ExitCode);
+        var goodDism = afterDism == Integrity.Healthy;
         if (goodDism) MarkRepaired(report, "Windows bileşen deposu");
+        tracker.Finish("dism-verify", goodDism?"Healthy":afterDism is Integrity.Corrupt or Integrity.Unrepairable?"Critical":"Unknown", goodDism?"DISM yeniden taradı; bileşen deposu bütünlüğü doğrulandı.":afterDism is Integrity.Corrupt or Integrity.Unrepairable?"DISM yeniden taradı; bileşen deposu bozulması devam ediyor.":Failure(verifyDism));
+        tracker.Start("sfc-verify", "Onarım sonrası Windows sistem dosyaları doğrulanıyor…");
+        var verifySfc = await RunSystemAsync("sfc.exe", new[] { "/verifyonly" }, "sfc-after", report.ReportDirectory, TimeSpan.FromMinutes(45));
+        var afterSfc = verifySfc.TimedOut ? Integrity.Unknown : Sfc(verifySfc.Output, verifySfc.ExitCode);
+        var goodSfc = afterSfc == Integrity.Healthy;
         if (goodSfc) MarkRepaired(report, "Windows sistem dosyaları");
         Add(report, "Onarım", "Onarım sonrası doğrulama", goodDism && goodSfc ? "Repaired" : "Unknown", goodDism && goodSfc ? "DISM ve SFC tekrar denetlendi; bütünlük doğrulandı." : "İki doğrulamanın da temiz olduğu doğrulanamadı. Ham kayıtları inceleyin.");
         try
@@ -157,6 +189,7 @@ public sealed class DiagnosticsEngine
             if (Bool(check, "Ok")) report.RebootRequired |= ParseGuard(check.GetProperty("Data")).PendingReboot;
         }
         catch { Add(report, "Windows", "Onarım sonrası yeniden başlatma durumu", "Unknown", "Durum okunamadı; Windows bildirimlerini kontrol edin."); }
+        tracker.Finish("sfc-verify", goodSfc?"Healthy":afterSfc==Integrity.Corrupt?"Critical":"Unknown", goodSfc?"SFC yeniden doğruladı; sistem dosyaları bütünlüğü doğrulandı.":afterSfc==Integrity.Corrupt?"SFC yeniden doğruladı; sistem dosyası bozulması devam ediyor.":Failure(verifySfc));
     }
 
     internal static void Interpret(ScanReport report, string name, JsonElement data)

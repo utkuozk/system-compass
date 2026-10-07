@@ -1,8 +1,8 @@
 ; Build with Inno Setup 6.3+ after publishing the self-contained win-x64 app.
-; ISCC.exe /DAppVersion=1.9.0 /DPublishDir="C:\path\setup-app" /DOutputDir="C:\path\artifacts" SystemCompass.iss
+; ISCC.exe /DAppVersion=1.10.0 /DPublishDir="C:\path\setup-app" /DOutputDir="C:\path\artifacts" SystemCompass.iss
 ; No runtime downloads, background maintenance, or forced process termination.
 #ifndef AppVersion
-  #define AppVersion "1.9.0"
+  #define AppVersion "1.10.0"
 #endif
 #ifndef PublishDir
   #define PublishDir SourcePath + "..\artifacts\setup-app"

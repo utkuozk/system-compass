@@ -1,8 +1,8 @@
-SYSTEM COMPASS 1.9
+SYSTEM COMPASS 1.10
 
-NORMAL KURULUM: System-Compass-Setup-1.9.0.exe dosyasını indirip açın; Türkçe/English seçip sihirbazı tamamlayın. ZIP açmak veya .NET'i ayrıca kurmak gerekmez. Masaüstü/Başlat menüsündeki System Compass kısayolunu kullanın. Windows Yüklü uygulamalar bölümünden kaldırabilirsiniz; raporlar korunur. Önce devam eden bakımın bitmesini bekleyip uygulamayı kapatın. Kurulum otomatik yeniden başlatma veya bakım başlatmaz. 64-bit Windows 10/11 gerekir. Kurulum dosyası kod imzalı değildir.
+NORMAL KURULUM: System-Compass-Setup-1.10.0.exe dosyasını indirip açın; Türkçe/English seçip sihirbazı tamamlayın. ZIP açmak veya .NET'i ayrıca kurmak gerekmez. Masaüstü/Başlat menüsündeki System Compass kısayolunu kullanın. Windows Yüklü uygulamalar bölümünden kaldırabilirsiniz; raporlar korunur. Önce devam eden bakımın bitmesini bekleyip uygulamayı kapatın. Kurulum otomatik yeniden başlatma veya bakım başlatmaz. 64-bit Windows 10/11 gerekir. Kurulum dosyası kod imzalı değildir.
 
-NORMAL INSTALLATION: Download System-Compass-Setup-1.9.0.exe and follow the Turkish/English wizard. Runtime included; no ZIP extraction or separate .NET install. Desktop/Start menu shortcuts and Windows Installed apps uninstall are provided. Saved reports/settings are preserved. Wait for maintenance and close the app before setup/removal. No automatic restart. Requires 64-bit Windows 10/11. Installer is unsigned. The ZIP instructions below apply only to older updater compatibility/advanced portable use.
+NORMAL INSTALLATION: Download System-Compass-Setup-1.10.0.exe and follow the Turkish/English wizard. Runtime included; no ZIP extraction or separate .NET install. Desktop/Start menu shortcuts and Windows Installed apps uninstall are provided. Saved reports/settings are preserved. Wait for maintenance and close the app before setup/removal. No automatic restart. Requires 64-bit Windows 10/11. Installer is unsigned. The ZIP instructions below apply only to older updater compatibility/advanced portable use.
 
 Pencere ekrana uygun boyutta açılır. Üst çubuktan taşıyabilir, küçültebilir, büyütebilir veya kapatabilirsiniz. Kenarlardan boyutlandırılabilir. Güncelleme ekranları yenilendi; yazılım sorgusu sürücü sorgusundan bağımsız çalışır. Kurulumlar ve onarım işlemleri çakışmaması için sırayla yürür.
 
@@ -14,3 +14,5 @@ GitHub repository: https://github.com/utkuozk/system-compass
 The default release feed is utkuozk/system-compass. New releases appear after the GitHub workflow completes successfully. Source publication alone does not mean a downloadable release is ready.
 
 Select updates with checkboxes and use Update selected items. A separate progress window shows each result. Hide it to keep using other pages; closing the main app lets the current worker finish but stops launching the remaining queue. Setup English/Turkish is applied on next launch.
+
+Health overview: follow the Progress tab during scanning. Result tabs group Windows, storage, hardware, event history and other checks. Select a row to read its complete detail. A finished step means the check ended, not that the computer is healthy; inconclusive and skipped checks remain distinct.

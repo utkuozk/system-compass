@@ -37,6 +37,10 @@ public partial class MainWindow
     private static void RenderPreview(FrameworkElement content,int width,int height,string path)
     {
         content.Measure(new Size(width,height));content.Arrange(new Rect(0,0,width,height));content.UpdateLayout();
+        // DataGrid completes star-column widths through a deferred layout callback.
+        // Let that callback run before capturing a window that has never been shown.
+        content.Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);
+        content.UpdateLayout();
         var bitmap=new RenderTargetBitmap(width,height,96,96,PixelFormats.Pbgra32);
         var background=new DrawingVisual();
         using(var drawing=background.RenderOpen())drawing.DrawRectangle(new SolidColorBrush(Color.FromRgb(244,247,251)),null,new Rect(0,0,width,height));

@@ -25,11 +25,13 @@ public sealed class ScanReport
     public DateTimeOffset? FinishedUtc { get; set; }
     public bool DeepScan { get; set; }
     public bool IsDemo { get; set; }
+    public bool Interrupted { get; set; }
     public string AppVersion { get; set; } = "";
     public string Summary { get; set; } = "Kontrol bekleniyor";
     public bool RepairAttempted { get; set; }
     public bool RebootRequired { get; set; }
     public List<Finding> Findings { get; set; } = new();
+    public List<ScanStep> Steps { get; set; } = new();
     public string ReportDirectory { get; set; } = "";
 }
 public sealed class ScanProgress
@@ -38,4 +40,26 @@ public sealed class ScanProgress
     public DateTimeOffset UpdatedUtc { get; set; } = DateTimeOffset.UtcNow;
     public string Message { get; set; } = "";
     public bool Running { get; set; }
+    public bool Interrupted { get; set; }
+    public string ScanId { get; set; } = "";
+    public bool DeepScan { get; set; }
+    public bool ManualRepair { get; set; }
+    public DateTimeOffset StartedUtc { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? FinishedUtc { get; set; }
+    public DateTimeOffset? ProcessStartedUtc { get; set; }
+    public string CurrentStepId { get; set; } = "";
+    public List<ScanStep> Steps { get; set; } = new();
+    public List<Finding> PartialFindings { get; set; } = new();
+}
+public sealed class ScanStep
+{
+    public string Id { get; set; } = "";
+    public int Order { get; set; }
+    public string Title { get; set; } = "";
+    // Execution state is separate from the result: Completed never means Healthy.
+    public string Status { get; set; } = "Pending";
+    public string Outcome { get; set; } = "";
+    public string Detail { get; set; } = "";
+    public DateTimeOffset? StartedUtc { get; set; }
+    public DateTimeOffset? FinishedUtc { get; set; }
 }

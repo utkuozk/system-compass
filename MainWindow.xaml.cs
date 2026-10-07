@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     public MainWindow(bool isDemo=false)
     {
         InitializeComponent(); demo=isDemo;
+        InitializeHealthDashboard();
         InitializeWindowBehavior();
         settings=demo ? new() : LocalStore.LoadSettings();
         HourPicker.ItemsSource=Enumerable.Range(0,24).Select(h=>$"{h:00}:00"); HourPicker.SelectedIndex=Math.Clamp(settings.ScheduleHour,0,23);
@@ -45,7 +46,7 @@ public partial class MainWindow : Window
             var snapshot=await Task.Run(()=> {
                 var reports=LocalStore.Reports();
                 var progress=LocalStore.Read<ScanProgress>(LocalStore.ProgressPath);
-                return (reports,progress,active:progress?.Running==true && IsAlive(progress.ProcessId),installed:SchedulerService.IsInstalled(),release:ReleaseFeed.Check());
+                return (reports,progress,active:progress?.Running==true && IsScanAlive(progress),installed:SchedulerService.IsInstalled(),release:ReleaseFeed.Check());
             });
             if(windowClosed)return;
             var reports=snapshot.reports;
@@ -57,8 +58,9 @@ public partial class MainWindow : Window
             if(selectedReportId==null && reports.Count>0 && (shownReport?.Id!=reports[0].Id || shownReport?.FinishedUtc!=reports[0].FinishedUtc))ShowReport(reports[0]);
             HistoryEmpty.Visibility=reports.Count==0?Visibility.Visible:Visibility.Collapsed;
             workerRunning=snapshot.active;
-            ProgressPanel.Visibility=workerRunning?Visibility.Visible:Visibility.Collapsed;
+            ProgressPanel.Visibility=Visibility.Collapsed;
             ProgressText.Text=DynamicTranslations.KnownText(snapshot.progress?.Message??"");
+            RenderHealthProgress(snapshot.progress,snapshot.active);
             QuickButton.IsEnabled=!workerRunning;DeepButton.IsEnabled=!workerRunning;
             ScheduleBadge.Text=T(snapshot.installed?"Günlük plan etkin":"Plan etkin değil");
             if(DateTime.UtcNow>=nextReleaseCheck) {
@@ -82,23 +84,20 @@ public partial class MainWindow : Window
         HeroTitle.Text=DynamicTranslations.KnownText(report.Summary);
         HeroDetail.Text=T(report.RebootRequired?"Bazı işlemler yeniden başlatma bekliyor. Uygulama bilgisayarını yeniden başlatmaz.":report.RepairAttempted?"Onarım denemesi yapıldı. Sonuç ve doğrulama ayrıntıları aşağıda.":"Bulgular ve erişilemeyen kontroller aşağıda ayrı gösterilir.");
         HeroDetail.Text+=" "+T("Kaynak tanılama çıktıları özgün dilinde korunur.");
+        HeroDetail.ToolTip=HeroDetail.Text;
+        HeroDetail.Text=T(report.RebootRequired?"Yeniden başlatma bekliyor; bilgisayarı uygulama yeniden başlatmaz.":report.RepairAttempted?"Onarım denendi; doğrulama sonuçlarını Windows sekmesinde inceleyin.":"Bulgular sekmelerde gruplanır. Bir satır seçerek ayrıntıların tamamını okuyun.");
         IssueCount.Text=issues.ToString(); CoverageCount.Text=$"{known} / {report.Findings.Count}";
         LastScanText.Text=report.StartedUtc.ToLocalTime().ToString("dd MMM · HH:mm",System.Globalization.CultureInfo.CurrentCulture);
         ScanKindText.Text=T(report.DeepScan?"Kapsamlı tarama":"Hafif kontrol");
         if(!report.IsDemo && string.IsNullOrEmpty(report.AppVersion)) { HeroEyebrow.Text+=T(" · ESKİ SÜRÜM RAPORU"); HeroDetail.Text=T("Bu rapor eski sürümle oluşturuldu; bilinen sayım hatasını içerebilir. Güncel sonuç için yeniden kontrol edin.")+" "+T("Kaynak tanılama çıktıları özgün dilinde korunur."); }
-        FindingsList.ItemsSource=report.Findings.Select(f=>new FindingRow(f)).ToList(); EmptyText.Visibility=Visibility.Collapsed;
-        DismStatus.Text=DiagnosticLabel(report,"Windows bileşen deposu");
-        SfcStatus.Text=DiagnosticLabel(report,"Windows sistem dosyaları");
-        DiskStatus.Text=DiagnosticLabel(report,"C: dosya sistemi");
-        RamStatus.Text=T("Bu taramada test edilmedi");
+        RenderHealthResults();
         RenderRepairAction();
-        DiagnosticDate.Text=F("Bu rapor: {0:g} · RAM için yalnızca geçmiş test kayıtları okunur.",report.StartedUtc.ToLocalTime());
     }
     internal static string DiagnosticLabel(ScanReport report,string title) {
         var f=report.Findings.LastOrDefault(x=>x.Title==title);
         return T(f==null?"Bu taramada kontrol edilmedi":f.Status switch {"Healthy"=>"Sorun bulunmadı","Critical"=>"Bozulma bulundu","Repaired"=>"Onarıldı ve doğrulandı",_=>"Sonuç doğrulanamadı"});
     }
-    private void Page(string page) { AntivirusPanel.Visibility=page=="antivirus"?Visibility.Visible:Visibility.Collapsed; OverviewPanel.Visibility=page=="overview"?Visibility.Visible:Visibility.Collapsed; HistoryPanel.Visibility=page=="history"?Visibility.Visible:Visibility.Collapsed; SettingsPanel.Visibility=page=="settings"?Visibility.Visible:Visibility.Collapsed; UpdatesPanel.Visibility=page=="updates"?Visibility.Visible:Visibility.Collapsed; PageTitle.Text=T(page=="antivirus"?"Antivirüs ve koruma":page=="overview"?"Bilgisayarının durumu":page=="history"?"Rapor geçmişi":page=="updates"?"Güncelleme merkezi":"Bakım ayarları"); }
+    private void Page(string page) { OtherPagesScroll.Visibility=page=="overview"?Visibility.Collapsed:Visibility.Visible; AntivirusPanel.Visibility=page=="antivirus"?Visibility.Visible:Visibility.Collapsed; OverviewPanel.Visibility=page=="overview"?Visibility.Visible:Visibility.Collapsed; HistoryPanel.Visibility=page=="history"?Visibility.Visible:Visibility.Collapsed; SettingsPanel.Visibility=page=="settings"?Visibility.Visible:Visibility.Collapsed; UpdatesPanel.Visibility=page=="updates"?Visibility.Visible:Visibility.Collapsed; PageTitle.Text=T(page=="antivirus"?"Antivirüs ve koruma":page=="overview"?"Bilgisayarının durumu":page=="history"?"Rapor geçmişi":page=="updates"?"Güncelleme merkezi":"Bakım ayarları"); }
     private void WindowsUpdates_Click(object sender,RoutedEventArgs e)=>ShowUpdates("windows");
     private void SoftwareUpdates_Click(object sender,RoutedEventArgs e)=>ShowUpdates("software");
     private void DriverUpdates_Click(object sender,RoutedEventArgs e)=>ShowUpdates("drivers");
@@ -127,15 +126,17 @@ public partial class MainWindow : Window
     private void Overview_Click(object sender,RoutedEventArgs e) { selectedReportId=null; Page("overview"); if(!demo) Refresh(); }
     private void History_Click(object sender,RoutedEventArgs e) { Page("history"); }
     private async void Settings_Click(object sender,RoutedEventArgs e) { Page("settings"); if(!demo) {SettingsStatus.Text=T("Sonuçlar okunuyor…");var status=await Task.Run(SchedulerService.GetStatus);if(!windowClosed)SettingsStatus.Text=DynamicTranslations.KnownText(status);} }
-    private void History_Selected(object sender,SelectionChangedEventArgs e) { if(updatingHistory) return; if(HistoryList.SelectedItem is HistoryRow row) {selectedReportId=row.Report.Id; ShowReport(row.Report); Page("overview");} }
+    private void History_Selected(object sender,SelectionChangedEventArgs e) { if(updatingHistory) return; if(HistoryList.SelectedItem is HistoryRow row) {selectedReportId=row.Report.Id; ShowReport(row.Report); RenderHealthProgress(null,false); HealthTabs.SelectedItem=HealthAttentionTab; Page("overview");} }
     private void Quick_Click(object sender,RoutedEventArgs e) => StartScan(false);
     private void Deep_Click(object sender,RoutedEventArgs e) => StartScan(true);
-    private void StartScan(bool deep)
+    private async void StartScan(bool deep)
     {
         if(demo) { MessageBox.Show(T("Bu yalnızca arayüz önizlemesidir; tarama başlatılmadı."),"SystemCompass"); return; }
-        if(workerRunning || installLaunching || updateInstalling) return;
-        try { App.Elevate(deep?"--worker --deep":"--worker"); selectedReportId=null; ProgressPanel.Visibility=Visibility.Visible; ProgressText.Text=T("Yönetici izni ve kontrol başlangıcı bekleniyor…"); }
-        catch(Exception ex) { MessageBox.Show(F("Kontrol başlatılamadı. Yönetici izni verilmediyse işlem yapılmaz.\n{0}",DynamicTranslations.KnownText(ex.Message)),"SystemCompass"); }
+        if(workerRunning || healthLaunching || installLaunching || updateInstalling) return;
+        healthLaunching=true;QuickButton.IsEnabled=DeepButton.IsEnabled=false;
+        try { selectedReportId=null; ShowHealthScanStart(); await Task.Run(()=>App.Elevate(deep?"--worker --deep":"--worker")); healthLaunchPendingUntil=DateTime.UtcNow.AddSeconds(30);Refresh(); }
+        catch(Exception ex) { healthLaunchPendingUntil=DateTime.MinValue; HealthCurrentStage.Text=T("Tarama başlatılamadı."); HealthStageCounts.Text=DynamicTranslations.KnownText(ex.Message); MessageBox.Show(F("Kontrol başlatılamadı. Yönetici izni verilmediyse işlem yapılmaz.\n{0}",DynamicTranslations.KnownText(ex.Message)),"SystemCompass"); }
+        finally {healthLaunching=false;RefreshResultActions();}
     }
     private void Folder_Click(object sender,RoutedEventArgs e)
     {
@@ -164,6 +165,7 @@ public partial class MainWindow : Window
 }
 public sealed class FindingRow(Finding finding)
 {
+    public Finding Finding=>finding;
     public string Category=>T(finding.Category); public string Title=>DynamicTranslations.KnownText(finding.Title); public string Detail=>DynamicTranslations.KnownText(finding.Detail);
     public string Label=>T(finding.Status switch {"Healthy"=>"Sorun yok","Warning"=>"İncelenmeli","Critical"=>"Sorun bulundu","Repaired"=>"Onarıldı","Info"=>"Bilgi",_=>"Doğrulanmadı"});
     public Brush Color=>(Brush)new BrushConverter().ConvertFromString(finding.Status switch {"Healthy" or "Repaired"=>"#DDEFE5","Critical"=>"#F9DDDB","Warning"=>"#FFF0CD",_=>"#E9EEF0"})!;

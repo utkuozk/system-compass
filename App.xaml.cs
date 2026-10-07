@@ -71,39 +71,60 @@ public partial class App : Application
         string sid=WindowsIdentity.GetCurrent().User?.Value ?? Environment.UserName;
         using var mutex=new Mutex(false,"Local\\SistemPusulasi-Scan-"+sid);
         bool acquired=false;
+        ScanTracker? tracker=null;
+        ScanReport? report=null;
         try {
             try { acquired=mutex.WaitOne(0); } catch(AbandonedMutexException) { acquired=true; }
             if(!acquired) return false;
             string dir=Path.Combine(LocalStore.ReportsRoot,DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
             Directory.CreateDirectory(dir);
-            void Progress(string message) => LocalStore.Write(LocalStore.ProgressPath,new ScanProgress {ProcessId=Environment.ProcessId,Running=true,Message=message});
+            tracker=new ScanTracker(deep,manualRepair,snapshot=>LocalStore.Write(LocalStore.ProgressPath,snapshot),Path.GetFileName(dir));
+            void Progress(string message) => tracker.Message(message);
             Progress(manualRepair ? "Onarım için güncel Windows bütünlüğü yeniden denetleniyor…" : "Kontrol hazırlanıyor…");
-            ScanReport report;
-            try { report=new DiagnosticsEngine().RunAsync(deep,settings,dir,Progress,manualRepair).GetAwaiter().GetResult(); }
-            catch(Exception ex) { report=new ScanReport {DeepScan=deep,ReportDirectory=dir,FinishedUtc=DateTimeOffset.UtcNow,Summary="Kontrol tamamlanamadı",Findings=new() {new Finding {Category="Uygulama",Title="Kontrol hatası",Status="Unknown",Detail=ex.Message}}}; }
+            try { report=new DiagnosticsEngine().RunAsync(deep,settings,dir,Progress,manualRepair,tracker).GetAwaiter().GetResult(); }
+            catch(Exception ex) { report=new ScanReport {DeepScan=deep,ReportDirectory=dir,FinishedUtc=DateTimeOffset.UtcNow,Summary="Kontrol tamamlanamadı",Findings=new() {new Finding {Category="Uygulama",Title="Kontrol hatası",Status="Unknown",Detail=ex.Message}}}; tracker.Attach(report); tracker.FailActive(ex.Message); }
             if(deep && !manualRepair) {
                 foreach(var kind in new[]{"windows","drivers","software"}) {
-                    Progress("Güncelleme envanteri kontrol ediliyor: "+kind);
+                    tracker.Start("updates-"+kind,"Güncelleme envanteri kontrol ediliyor: "+kind);
                     try {
                         var inventory=UpdateInventory.ScanAsync(kind).GetAwaiter().GetResult();
                         LocalStore.Write(Path.Combine(LocalStore.Root,"updates-"+kind+".json"),inventory);
                         report.Findings.Add(new Finding {Category="Güncellemeler",Title=kind=="windows"?"Windows Update":kind=="drivers"?"Sürücü güncellemeleri":"Yazılım güncellemeleri",Status=inventory.Status.StartsWith("Unknown:")?"Unknown":"Info",Detail=inventory.Status.Replace("Unknown:","Doğrulanamadı:").Replace("Checked:","Kontrol edildi:")+" Ayrıntılar Güncelleme merkezi ekranında."});
                     } catch(Exception ex){report.Findings.Add(new Finding {Category="Güncellemeler",Title=kind,Status="Unknown",Detail=ex.Message});}
+                    tracker.Finish("updates-"+kind);
                 }
             }
-            Progress("Antivirüs koruma durumu okunuyor…");
+            else tracker.SkipPending(new[]{"updates-windows","updates-drivers","updates-software"},manualRepair?"İstenen onarımın kapsamı dışında.":"Güncelleme envanteri ayrıntılı taramada kontrol edilir.");
+            tracker.Start("antivirus","Antivirüs koruma durumu okunuyor…");
             try {var security=AntivirusService.ReadAsync().GetAwaiter().GetResult(); LocalStore.Write(Path.Combine(LocalStore.Root,"antivirus.json"),security);report.Findings.AddRange(security.Findings);}
             catch(Exception ex){report.Findings.Add(new Finding {Category="Antivirüs",Title="Koruma durumu",Status="Unknown",Detail=ex.Message});}
+            tracker.Finish("antivirus");
             report.ReportDirectory=dir;
             report.AppVersion=ReleaseFeed.Current.ToString(3);
             report.FinishedUtc = DateTimeOffset.UtcNow;
             int critical=report.Findings.Count(f=>f.Status=="Critical"), warnings=report.Findings.Count(f=>f.Status=="Warning"), unknown=report.Findings.Count(f=>f.Status=="Unknown");
             report.Summary=$"{critical} ciddi bulgu; {warnings} uyarı; {unknown} belirsiz kontrol.";
+            tracker.ResolveUnfinished("Önceki kontrolün tamamlandığı doğrulanamadı.","report");
+            tracker.Start("report","Rapor kaydediliyor…");
             LocalStore.SaveReport(report);
             WriteReadableReport(report);
-            LocalStore.Write(LocalStore.ProgressPath,new ScanProgress {ProcessId=Environment.ProcessId,Running=false,Message=report.Summary});
+            tracker.Finish("report","Info","Tarama raporu ve okunabilir kayıt kaydedildi.");
+            // Include the final execution timeline in the saved report as well as live progress.
+            try { LocalStore.SaveReport(report); }
+            catch { tracker.Start("report","Rapor kaydı tamamlanamadı."); throw; }
+            tracker.Stop(report.Summary);
             return true;
-        } finally { if(acquired) mutex.ReleaseMutex(); }
+        } catch(Exception ex) {
+            tracker?.FailActive("İşlem tamamlanamadı: "+ex.Message);
+            if(report!=null) {
+                report.Findings.Add(new Finding {Category="Uygulama",Title="Rapor kaydı tamamlanamadı",Status="Unknown",Detail=ex.Message});
+                report.FinishedUtc=DateTimeOffset.UtcNow; report.Summary="Kontrol raporu tamamlanamadı.";
+            }
+            tracker?.Stop("Kontrol tamamlanamadı: "+ex.Message,true);
+            if(report!=null) { try { LocalStore.SaveReport(report); } catch { } }
+            throw;
+        }
+        finally { if(acquired) mutex.ReleaseMutex(); }
     }
     private static void WriteReadableReport(ScanReport report)
     {

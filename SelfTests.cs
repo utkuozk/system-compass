@@ -9,8 +9,12 @@ internal static class SelfTests
         void Check(bool condition,string name) { if(!condition) throw new InvalidOperationException("Test failed: "+name); results.Add("PASS: "+name); }
         MainWindow.CheckInventoryUi(Check);
         MainWindow.CheckUpdateSelectionUi(Check);
+        MainWindow.CheckHealthUi(Check);
+        MainWindow.RenderHealthUiPreview(Path.Combine(AppContext.BaseDirectory,"ui-previews"));
         results.AddRange(ManualRepairTests.Run());
         results.AddRange(UpdateInstallerTests.Run());
+        results.AddRange(ScanTrackingTests.Run());
+        ScrollBarThemeTests.Run(Check);
         results.AddRange(UpdateScriptTests.Run().GetAwaiter().GetResult());
         Check(UpdateInventory.ParseWingetOutput("Name                     Id                      Version        Available      Source\n---------------------------------------------------------------------------------------\nExample App              Example.App             1.0            2.0            winget",0).Entries.Single().PackageId=="Example.App","Software inventory retains exact package identity");
         var windowsIdentity=new UpdateEntry("Update","Unknown","KB123","Windows Update Agent (yapılandırılmış kaynak)","windows") {UpdateId="11111111-1111-1111-1111-111111111111",Revision=2};
