@@ -264,6 +264,7 @@ internal static class DynamicTranslations
     internal static string KnownText(string value)
     {
         if(!Language.StartsWith("en",StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(value))return value;
+        if(DiagnosticDetailTranslations.TryTranslate(value,out var detail))return detail;
         foreach(var (pattern,format) in Templates)
         {
             var match=Regex.Match(value,pattern,RegexOptions.CultureInvariant,TimeSpan.FromMilliseconds(100));

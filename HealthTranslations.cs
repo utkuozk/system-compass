@@ -52,7 +52,8 @@ public static class HealthTranslations
     public static string Detail(string text)
     {
         return string.Join("\n",text.Split('\n').Select(line=>{
-            if(L10n.EnglishTranslations.ContainsKey(line))return L10n.T(line);
+            var wholeLine=DynamicTranslations.KnownText(line);
+            if(wholeLine!=line)return wholeLine;
             var separator=line.IndexOf(": ",StringComparison.Ordinal);
             return separator>0?DynamicTranslations.KnownText(line[..separator])+": "+DynamicTranslations.KnownText(line[(separator+2)..]):DynamicTranslations.KnownText(line);
         }));

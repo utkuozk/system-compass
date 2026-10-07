@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType><TargetFramework>net8.0-windows7.0</TargetFramework><UseWPF>true</UseWPF>
     <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>SistemPusulasi</AssemblyName><RootNamespace>SistemPusulasi</RootNamespace>
-    <Version>1.10.1</Version><Company>Hakan</Company><Product>System Compass</Product>
+    <Version>1.10.2</Version><Company>Hakan</Company><Product>System Compass</Product>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup><EmbeddedResource Include="Diagnostics\*.ps1" /><EmbeddedResource Include="Updates\*.ps1" /><EmbeddedResource Include="Security\*.ps1" /><Compile Remove="SchedulerService.cs" /></ItemGroup>
