@@ -1,0 +1,42 @@
+namespace SistemPusulasi;
+internal static class ActionTranslations
+{
+    internal static void Register()=>L10n.RegisterEnglish(new Dictionary<string,string>
+    {
+        ["Sonuçlara göre işlem yap"]="Take action on results",
+        ["Windows bozulmasını onar"]="Repair Windows corruption",
+        ["Seçileni güncelle"]="Update selected item",
+        ["Bu raporda Windows dosya bozulması bulundu. Onar düğmesi yeni bir kapsamlı doğrulama yapar; bozulma sürüyorsa DISM/SFC ile onarır. Yönetici izni gerekir; otomatik yeniden başlatma yapılmaz."]="This report found Windows file corruption. Repair runs a fresh deep verification and repairs persistent corruption with DISM/SFC. Administrator permission is required; no automatic restart.",
+        ["Önce bilgisayar durumunu kontrol edin. Sonuçlara uygun işlemler burada gösterilir."]="Check the computer first. Actions supported by the results will appear here.",
+        ["Bu raporda düğmeyle onarılabilecek doğrulanmış Windows bozulması yok. Donanım uyarıları, geçmiş olaylar ve belirsiz kontroller otomatik onarılmış sayılmaz. Eksik Windows kontrolleri için kapsamlı taramayı kullanın."]="This report has no confirmed Windows corruption eligible for repair. Hardware warnings, past events and unknown checks cannot be marked repaired automatically. Use a deep scan for missing Windows checks.",
+        ["Windows dosyaları yeniden denetlenecek; doğrulanan bozulma onarılacak. Bu işlem uzun sürebilir ve yönetici izni ister. Otomatik onarım tercihiniz değişmez. Bilgisayar otomatik yeniden başlatılmaz. Başlatılsın mı?"]="Windows files will be checked again and confirmed corruption repaired. This may take a while and requires administrator permission. Your automatic repair preference stays unchanged. The computer will not restart automatically. Start?",
+        ["Güncellenecek kaydı listeden seçin."]="Select the item to update.",
+        ["Yeni sürüm doğrulanmadığı için kurulum yapılamaz."]="Installation is unavailable because a newer version was not verified.",
+        ["Başka bir kurulum veya bakım sürüyor. Menüler kullanılabilir; yeni kurulum için tamamlanmasını bekleyin."]="Another installation or maintenance task is running. You can use the menus; wait before starting another installation.",
+        ["Doğrudan yazılım kurulumu yalnızca desteklenen MSIX paketleriyle sınırlıdır. Paket türü kurulumdan önce doğrulanır; desteklenmiyorsa işlem yapılmaz. Diğer yazılımlar için uygulamanın kendi güncelleyicisini kullanın."]="Direct software updates support MSIX packages only. The installer type is checked before installation; unsupported packages are not installed. Use the publisher’s updater for other software.",
+        ["Yalnızca seçili Windows Update kaydı kurulacak. Yeniden başlatma gerekiyorsa raporda gösterilir; uygulama yeniden başlatmaz."]="Only the selected Windows Update item will be installed. A required restart will be reported; the app will not restart the computer.",
+        ["{0}\nMevcut: {1} · Yeni: {2}\n\nSeçili güncelleme yeniden doğrulanıp indirilecek ve kurulacak. Gereken lisans koşullarını kabul ederek devam edersiniz. Sürücü kurulumu ilgili aygıtı kısa süre kesintiye uğratabilir. Otomatik yeniden başlatma yapılmaz. Devam edilsin mi?"]="{0}\nInstalled: {1} · Available: {2}\n\nThe selected update will be checked again, downloaded and installed. Continuing accepts its required license terms. Driver installation may briefly interrupt the affected device. No automatic restart. Continue?",
+        ["Kurulum başlatılamadı."]="Installation could not start.",
+        ["Kurulum koşulları denetleniyor…"]="Checking installation requirements…",
+        ["Kurulumdan sonra listeyi güncellemeleri denetle düğmesiyle yeniden kontrol edin."]="After installation, refresh the list with Check for updates.",
+        ["Önceki kurulum kesilmiş olabilir. Sonucu yeniden tarayarak doğrulayın."]="The previous installation may have been interrupted. Scan again to verify the result.",
+        ["Yeniden başlatma gerekiyor; bilgisayar otomatik yeniden başlatılmadı."]="A restart is required; the computer was not restarted automatically.",
+        ["Bu kayıt güncelleme kaynağında listelendi. Aşağıda kurulum desteği ve kullanılabilir işlem gösterilir."]="This item is listed by the update source. Installation support and available actions are shown below.",
+        ["Güncelleme türü geçersiz."]="Invalid update type.",
+        ["Güncelleme kaydı eksik veya geçersiz."]="The update record is incomplete or invalid.",
+        ["Yazılım için winget kaynağı, kesin paket kimliği ve tek bir doğrulanmış sürüm gerekli."]="Software installation requires the winget source, an exact package ID and one verified version.",
+        ["Windows Update kimliği ve revizyonu doğrulanamadı; yeniden kontrol edin."]="Windows Update identity and revision were not verified; scan again.",
+        ["Başka bir güncelleme kurulumu çalışıyor; tamamlanmasını bekleyin."]="Another update installation is running; wait for it to finish.",
+        ["Sistem taraması veya onarım çalışıyor; tamamlanmasını bekleyin."]="A system scan or repair is running; wait for it to finish.",
+        ["Seçilen güncellemenin kimliği ve kullanılabilirliği yeniden doğrulanıyor…"]="Verifying the selected update’s identity and availability…",
+        ["Kurulu paket sürümü yeniden doğrulanıyor…"]="Verifying the installed package version…",
+        ["Seçilen yazılımın MSIX güncellemesi kuruluyor; işlem tamamlanana kadar bekleniyor…"]="Installing the selected MSIX software update; waiting for completion…",
+        ["Kurulum sonrası seçilen paket sürümü doğrulanıyor…"]="Verifying the selected package version after installation…",
+        ["Windows Update tam kimlik ve revizyonla yeniden aranıyor…"]="Looking up the exact Windows Update identity and revision…",
+        ["Yalnızca seçilen güncelleme Windows Update üzerinden indiriliyor…"]="Downloading only the selected update through Windows Update…",
+        ["Yalnızca seçilen güncelleme kuruluyor; işlem tamamlanana kadar bekleniyor…"]="Installing only the selected update; waiting for completion…",
+        ["BIOS/UEFI/firmware güncellemeleri bu uygulamadan kurulmaz; üreticinin yönergelerini kullanın."]="BIOS/UEFI/firmware updates are not installed by this app; follow the manufacturer's instructions.",
+        ["Onarım için güncel Windows bütünlüğü yeniden denetleniyor…"]="Verifying current Windows integrity before repair…",
+        ["Taşımak için sürükleyin; büyütmek veya geri almak için çift tıklayın."]="Drag to move; double-click to maximize or restore.",
+    });
+}

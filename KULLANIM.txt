@@ -1,0 +1,10 @@
+SYSTEM COMPASS 1.7
+
+Pencere ekrana uygun boyutta açılır. Üst çubuktan taşıyabilir, küçültebilir, büyütebilir veya kapatabilirsiniz. Kenarlardan boyutlandırılabilir. Güncelleme ekranları yenilendi; yazılım sorgusu sürücü sorgusundan bağımsız çalışır. Kurulumlar ve onarım işlemleri çakışmaması için sırayla yürür.
+
+Extract the package and run SistemPusulasi.exe, or SistemPusulasi-Kur.exe to install. Requires .NET 8 Desktop Runtime. Turkish/English is available in Maintenance settings. The application is unsigned.
+
+139 automated checks passed locally; tests do not perform real installations or repairs. Direct software updates support eligible WinGet MSIX packages only. EXE/MSI and firmware installations are unsupported. The application does not automatically reboot. Active servicing continues in a separate worker even if the UI closes. Windows/WinGet manages download caches; do not manually delete them.
+
+GitHub repository: https://github.com/utkuozk/system-compass
+The default release feed is utkuozk/system-compass. New releases appear after the GitHub workflow completes successfully. Source publication alone does not mean a downloadable release is ready.

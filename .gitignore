@@ -1,0 +1,12 @@
+bin/
+obj/
+artifacts/
+Package/
+.dotnet-home/
+.vs/
+*.user
+*.suo
+*.pdb
+Reports/
+UpdateHistory/
+self-test-results.txt
