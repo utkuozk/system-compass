@@ -8,8 +8,10 @@ internal static class SelfTests
         var results=new List<string>();
         void Check(bool condition,string name) { if(!condition) throw new InvalidOperationException("Test failed: "+name); results.Add("PASS: "+name); }
         MainWindow.CheckInventoryUi(Check);
+        MainWindow.CheckUpdateSelectionUi(Check);
         results.AddRange(ManualRepairTests.Run());
         results.AddRange(UpdateInstallerTests.Run());
+        results.AddRange(UpdateScriptTests.Run().GetAwaiter().GetResult());
         Check(UpdateInventory.ParseWingetOutput("Name                     Id                      Version        Available      Source\n---------------------------------------------------------------------------------------\nExample App              Example.App             1.0            2.0            winget",0).Entries.Single().PackageId=="Example.App","Software inventory retains exact package identity");
         var windowsIdentity=new UpdateEntry("Update","Unknown","KB123","Windows Update Agent (yapılandırılmış kaynak)","windows") {UpdateId="11111111-1111-1111-1111-111111111111",Revision=2};
         var identityRoundtrip=System.Text.Json.JsonSerializer.Deserialize<UpdateEntry>(System.Text.Json.JsonSerializer.Serialize(windowsIdentity));
@@ -30,6 +32,21 @@ internal static class SelfTests
         }
         var settings=new AppSettings();
         Check(settings.AutoRepair && settings.DeepScanIntervalDays==7,"Safe default interval and auto-repair preference");
+        var languageTestRoot=Path.Combine(Path.GetTempPath(),"SystemCompassLanguageTest-"+Guid.NewGuid().ToString("N"));
+        try {
+            Directory.CreateDirectory(languageTestRoot);
+            var markerPath=Path.Combine(languageTestRoot,"installer-language.txt");
+            var appliedPath=Path.Combine(languageTestRoot,"user","applied.txt");
+            var languageSettings=new AppSettings {Language="tr",GitHubRepository="example/preserved",ScheduleHour=9};
+            File.WriteAllText(markerPath,"english|setup-1");
+            int saves=0;
+            void SaveLanguageSettings(AppSettings value)=>saves++;
+            Check(InstallerLanguage.ApplyPending(markerPath,appliedPath,languageSettings,SaveLanguageSettings),"Installer English choice is applied");
+            Check(languageSettings.Language=="en" && languageSettings.GitHubRepository=="example/preserved" && languageSettings.ScheduleHour==9,"Installer language update preserves other preferences");
+            Check(!InstallerLanguage.ApplyPending(markerPath,appliedPath,languageSettings,SaveLanguageSettings) && saves==1,"Applied installer language is not reapplied on later launches");
+            File.WriteAllText(markerPath,"unknown|setup-2");
+            Check(!InstallerLanguage.ApplyPending(markerPath,appliedPath,languageSettings,SaveLanguageSettings) && languageSettings.Language=="en","Unknown installer language is ignored");
+        } finally { try { Directory.Delete(languageTestRoot,true); } catch { } }
         Check(LocalStore.DeepDue(settings,Array.Empty<ScanReport>()),"First deep scan due");
         var recent=new ScanReport {DeepScan=true,FinishedUtc=DateTimeOffset.UtcNow,Findings=new(){new(){Category="Windows",Status="Unknown"}}};
         Check(LocalStore.DeepDue(settings,new[]{recent}),"Unknown result cannot suppress next deep scan");
@@ -116,7 +133,7 @@ internal static class SelfTests
         Check(englishHeading!="Bilgisayarının durumu" && !string.IsNullOrWhiteSpace(englishHeading),"English WPF resources render");
         Check(((System.Windows.Controls.ComboBox)englishWindow.FindName("LanguagePicker")).SelectedValue?.ToString()=="en","Language selector reflects English");
         Check(((System.Windows.Controls.Button)englishWindow.FindName("RepairButton")).Content?.ToString()=="Repair Windows corruption","English repair action is visible and translated");
-        Check(((System.Windows.Controls.Button)englishWindow.FindName("InstallSelectedButton")).Content?.ToString()=="Update selected item","English selected update action is translated");
+        Check(((System.Windows.Controls.Button)englishWindow.FindName("InstallSelectedButton")).Content?.ToString()=="Update selected items (0)","English selected update action is translated");
         Check(!((System.Windows.Controls.Button)englishWindow.FindName("InstallSelectedButton")).IsEnabled,"No installation action without a selected eligible item");
         Check(!((System.Windows.Controls.Button)englishWindow.FindName("RepairButton")).IsEnabled,"Demo and unconfirmed findings cannot start repair");
         Check(englishWindow.WindowStyle==System.Windows.WindowStyle.SingleBorderWindow && englishWindow.ResizeMode==System.Windows.ResizeMode.CanResizeWithGrip,"Native window caption controls and resize grip remain enabled");

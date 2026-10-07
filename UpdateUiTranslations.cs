@@ -1,0 +1,43 @@
+namespace SistemPusulasi;
+internal static class UpdateUiTranslations
+{
+    internal static void Register()=>L10n.RegisterEnglish(new Dictionary<string,string>
+    {
+        ["Görünen uygun kayıtları seç"]="Select eligible visible items",
+        ["Kurulum durumunu göster"]="Show installation status",
+        ["Seçilileri güncelle"]="Update selected items",
+        ["Seçilileri güncelle ({0})"]="Update selected items ({0})",
+        ["{0} kayıt seçili"]="{0} items selected",
+        ["Kurulum için seç"]="Select for installation",
+        ["Yazılım kurulumu desteklenen MSIX, MSI, WiX, Burn ve Inno paketleriyle sınırlıdır. Paket türü kurulumdan önce doğrulanır; desteklenmeyen türler kurulmaz. Diğer yazılımlar için uygulamanın kendi güncelleyicisini kullanın."]="Software installation supports MSIX, MSI, WiX, Burn and Inno packages. The installer type is checked before installation; unsupported types are not installed. Use the publisher’s updater for other software.",
+        ["Kurulum için kutuları işaretleyin. Seçimler arama sırasında korunur; yalnızca bu sayfadaki seçili kayıtlar sırayla kurulur. Otomatik yeniden başlatma yapılmaz."]="Check the boxes to install. Selections survive search; selected items on this page are installed in order. No automatic restart.",
+        ["{0} · {1} → {2}"]="{0} · {1} → {2}",
+        ["… ve {0} kayıt daha"]="… and {0} more items",
+        ["{0} güncelleme sırayla kurulacak:\n{1}\n\nHer kayıt yeniden doğrulanıp indirilecek ve kurulacak. Gereken lisans koşullarını kabul ederek devam edersiniz. Sürücü kurulumu ilgili aygıtı kısa süre kesintiye uğratabilir. Otomatik yeniden başlatma yapılmaz. Devam edilsin mi?"]="{0} updates will be installed in order:\n{1}\n\nEach item will be checked again, downloaded and installed. Continuing accepts the required license terms. Driver installation may briefly interrupt the affected device. No automatic restart. Continue?",
+        ["Sırada"]="Queued",
+        ["Başlatılıyor"]="Starting",
+        ["Çalışıyor"]="Running",
+        ["Tamamlandı"]="Completed",
+        ["Kurulmadı"]="Not installed",
+        ["Başarısız"]="Failed",
+        ["Başka işlem sürüyor"]="Another task is running",
+        ["Sonuç doğrulanamadı"]="Result unverified",
+        ["Başlatılmadı"]="Not started",
+        ["Kurulum başlangıcı ve gerekirse yönetici izni bekleniyor…"]="Waiting for installation to start and administrator permission if needed…",
+        ["Önceki işlemin sonucunu doğrulayın; kalan kayıtlar başlatılmadı."]="Verify the previous result; the remaining items were not started.",
+        ["Yeniden başlatma gerekiyor; kalan kayıtlar başlatılmadı. Bilgisayar otomatik yeniden başlatılmadı."]="A restart is required; the remaining items were not started. The computer was not restarted automatically.",
+        ["Kuyruk durdu. Başlatılmayan kayıtları ve işlem sonuçlarını kontrol edin."]="The queue stopped. Check the results and items that were not started.",
+        ["{0}: {1}\n{2}"]="{0}: {1}\n{2}",
+        ["Kurulum durumu okunamadı: {0}"]="Installation status could not be read: {0}",
+        ["Güncelleme kurulumu"]="Update installation",
+        ["Menüleri kullanmaya devam et"]="Continue using the menus",
+        ["Kurulum hazırlanıyor…"]="Preparing installation…",
+        ["Seçili güncellemeler kuruluyor"]="Installing selected updates",
+        ["Güncelleme kuyruğu tamamlandı"]="Update queue finished",
+        ["{0} / {1} işlem tamamlandı"]="{0} / {1} tasks completed",
+        ["Bu pencereyi gizleyip diğer menüleri kullanabilirsiniz. Kurulum devam eder. Otomatik yeniden başlatma yapılmaz."]="Hide this window to use the other menus. Installation continues. No automatic restart.",
+        ["Her kaydın sonucunu aşağıda kontrol edin. Güncelleme listesini yeniden tarayarak doğrulayın."]="Check each result below. Scan the update list again to verify.",
+        ["Kapat"]="Close",
+        ["İşlem başlatılmadı: {0}"]="The task was not started: {0}",
+    });
+}

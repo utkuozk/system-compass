@@ -4,6 +4,11 @@ public partial class App
 {
     internal static string UpdateInstallProgressPath=>Path.Combine(LocalStore.Root,"update-install-progress.json");
     internal static string UpdateInstallResultPath=>Path.Combine(LocalStore.Root,"update-install-result.json");
+    internal static string UpdateProgressPath(string id)
+    {
+        if(!Guid.TryParseExact(id,"N",out var parsed))throw new ArgumentException("Geçersiz işlem kimliği.");
+        return Path.Combine(LocalStore.Root,"UpdateHistory",parsed.ToString("N")+"-progress.json");
+    }
     internal static string UpdateRequestPath(string id)
     {
         if(!Guid.TryParseExact(id,"N",out var parsed))throw new ArgumentException("Geçersiz işlem kimliği.");
@@ -25,7 +30,12 @@ public partial class App
             var invalid=UpdateInstaller.Validate(entry);
             if(invalid!=null)throw new InvalidDataException(invalid);
             if(entry.Kind is "windows" or "drivers" && !IsAdmin())throw new InvalidOperationException("Windows/sürücü kurulumu yönetici izni gerektirir.");
-            void Progress(string message)=>LocalStore.Write(UpdateInstallProgressPath,new ScanProgress {ProcessId=Environment.ProcessId,Running=true,Message=message});
+            void Progress(string message)
+            {
+                var state=new ScanProgress {ProcessId=Environment.ProcessId,Running=true,Message=message};
+                LocalStore.Write(UpdateProgressPath(id),state);
+                LocalStore.Write(UpdateInstallProgressPath,state);
+            }
             Progress("Kurulum koşulları denetleniyor…");
             result=await UpdateInstaller.RunAsync(entry,Progress);
             result=result with {Detail=entry.Name+" — "+result.Detail};
@@ -34,5 +44,6 @@ public partial class App
         LocalStore.Write(UpdateInstallResultPath,result);
         LocalStore.Write(Path.Combine(LocalStore.Root,"UpdateHistory",id+".json"),result);
         LocalStore.Write(UpdateInstallProgressPath,new ScanProgress {ProcessId=Environment.ProcessId,Running=false,Message=result.Detail});
+        LocalStore.Write(UpdateProgressPath(id),new ScanProgress {ProcessId=Environment.ProcessId,Running=false,Message=result.Detail});
     }
 }

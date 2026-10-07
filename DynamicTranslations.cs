@@ -272,6 +272,12 @@ internal static class DynamicTranslations
         string translated=T(value);
         if(translated!=value)return translated;
         foreach(var (prefix,format) in new[]{
+            ("WinGet kurulum çıkış kodu: ","WinGet kurulum çıkış kodu: {0}"),
+            ("Kurulum tamamlanma sonucu doğrulanamadı. ","Kurulum tamamlanma sonucu doğrulanamadı. {0}"),
+            ("Kurulum sonucu okunamadı. ","Kurulum sonucu okunamadı. {0}"),
+            ("Kurulum başlatılamadı veya hazırlık tamamlanamadı. ","Kurulum başlatılamadı veya hazırlık tamamlanamadı. {0}"),
+            ("Kurulum başladı fakat tamamlanma sonucu doğrulanamadı. Yeniden kontrol edin. ","Kurulum başladı fakat tamamlanma sonucu doğrulanamadı. Yeniden kontrol edin. {0}"),
+            ("Kurulum başlatılamadı veya doğrulanamadı. ","Kurulum başlatılamadı veya doğrulanamadı. {0}"),
             ("Sürüm bilgisi doğrulanamadı: ","Sürüm bilgisi doğrulanamadı: {0}"),
             ("Zamanlama durumu okunamadı: ","Zamanlama durumu okunamadı: {0}")})
             if(value.StartsWith(prefix,StringComparison.Ordinal))return F(format,KnownText(value[prefix.Length..]));

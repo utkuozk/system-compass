@@ -8,7 +8,24 @@ $operationStarted = $false
 
 function Progress([string]$message) { [Console]::WriteLine('PUSULA_PROGRESS:' + $message) }
 function Result([string]$status, [string]$detail, [bool]$verified=$false) {
-    [Console]::WriteLine('PUSULA_RESULT:' + (@{Status=$status; Detail=$detail; RebootRequired=$script:reboot; Verified=$verified} | ConvertTo-Json -Compress))
+    # The embedded script runs in a child scope (& { ... }); script: would read a different scope.
+    [Console]::WriteLine('PUSULA_RESULT:' + (@{Status=$status; Detail=$detail; RebootRequired=[bool]$reboot; Verified=$verified} | ConvertTo-Json -Compress))
+}
+function Winget-InstallerType([string]$text) {
+    # CLI labels are localized. Values are invariant; always enforce the returned type on upgrade.
+    # Unrecognized or ambiguous output cannot authorize a generic EXE installer.
+    $clean = [regex]::Replace($text, '\x1B\[[0-?]*[ -/]*[@-~]', '')
+    $types = @([regex]::Matches($clean, '(?im)^\s+[^\r\n:]+:\s*(msix|msi|wix|burn|inno)\s*$') | ForEach-Object { $_.Groups[1].Value.ToLowerInvariant() } | Select-Object -Unique)
+    if ($types.Count -eq 1) { return $types[0] }
+    return ''
+}
+function Winget-UpgradeArguments([string]$id, [string]$version, [string]$type) {
+    if ($type -notin @('msix','msi','wix','burn','inno')) { throw 'Desteklenmeyen yükleyici türü.' }
+    $arguments = @('upgrade','--id',$id,'--exact','--source','winget','--version',$version,'--installer-type',$type,'--silent','--disable-interactivity','--skip-dependencies','--accept-package-agreements','--accept-source-agreements')
+    # Additive switches retain publisher install-scope/options and explicitly suppress restarts.
+    if ($type -in @('msi','wix')) { $arguments += @('--custom','/norestart REBOOT=ReallySuppress') }
+    elseif ($type -in @('burn','inno')) { $arguments += @('--custom','/norestart') }
+    return $arguments
 }
 function Available-Version($update, [string]$kind) {
     if ($kind -eq 'drivers') {
@@ -77,12 +94,21 @@ try {
         if ($beforeExit -ne 0 -or (Winget-InstalledVersion $before ([string]$entry.PackageId)) -cne [string]$entry.InstalledVersion) {
             Result 'Rejected' 'Seçilen kurulu paket sürümü değişti veya kesin olarak doğrulanamadı; yeniden kontrol edin.'; return
         }
-        Progress 'Seçilen yazılımın MSIX güncellemesi kuruluyor; işlem tamamlanana kadar bekleniyor…'
-        # Arbitrary EXE/MSI installers can restart themselves. MSIX uses Windows package deployment.
-        # No --allow-reboot, --force, custom switches, dependency installations or update-all.
+        Progress 'Yükleyici türü ve yeniden başlatmadan kurulum desteği denetleniyor…'
+        $ErrorActionPreference = 'Continue'
+        $metadata = (& $wingetPath show --id ([string]$entry.PackageId) --exact --source winget --version ([string]$entry.AvailableVersion) --disable-interactivity --accept-source-agreements 2>&1 | Out-String)
+        $metadataExit = $LASTEXITCODE
+        $ErrorActionPreference = 'Stop'
+        $installerType = Winget-InstallerType $metadata
+        if ($metadataExit -ne 0 -or -not $installerType) {
+            Result 'Rejected' 'Yeniden başlatmadan kurulumu desteklenen yükleyici doğrulanamadı. Desteklenen türler: MSIX, MSI, WiX, Burn ve Inno. Yayıncının güncelleyicisini kullanın.'; return
+        }
+        $upgradeArguments = @(Winget-UpgradeArguments ([string]$entry.PackageId) ([string]$entry.AvailableVersion) $installerType)
+        Progress 'Seçilen yazılım indiriliyor ve kuruluyor; yönetici izni istenirse Windows penceresinden onaylayın…'
+        # No --allow-reboot, --force, override, dependency installations or update-all.
         $operationStarted = $true
         $ErrorActionPreference = 'Continue'
-        $installOutput = (& $wingetPath upgrade --id ([string]$entry.PackageId) --exact --source winget --version ([string]$entry.AvailableVersion) --installer-type msix --silent --disable-interactivity --skip-dependencies --accept-package-agreements --accept-source-agreements 2>&1 | Out-String)
+        $installOutput = (& $wingetPath @upgradeArguments 2>&1 | Out-String)
         $installExit = $LASTEXITCODE
         $ErrorActionPreference = 'Stop'
         Progress 'Kurulum sonrası seçilen paket sürümü doğrulanıyor…'
@@ -90,12 +116,15 @@ try {
         $after = (& $wingetPath list --id ([string]$entry.PackageId) --exact --source winget --disable-interactivity 2>&1 | Out-String)
         $afterExit = $LASTEXITCODE
         $ErrorActionPreference = 'Stop'
+        try { $reboot = [bool](New-Object -ComObject Microsoft.Update.SystemInfo).RebootRequired } catch { }
         if ($installExit -eq 0 -and $afterExit -eq 0 -and (Winget-InstalledVersion $after ([string]$entry.PackageId)) -ceq [string]$entry.AvailableVersion) {
             Result 'Installed' 'Seçilen yazılım sürümünün kurulu olduğu doğrulandı. Otomatik yeniden başlatma yapılmadı.' $true
         } elseif ($installExit -eq 0) {
             Result 'Unknown' 'WinGet tamamlandı fakat seçilen sürümün kurulu olduğu doğrulanamadı; yeniden kontrol edin.'
         } else {
-            Result 'Failed' ('WinGet kurulum çıkış kodu: ' + $installExit + '. Bu uygulama yalnızca MSIX güncellemelerini güvenli yeniden başlatma ilkesiyle kurar. Uygun MSIX yükleyicisi bulunmayan yazılımlar için yayıncının güncelleyicisini kullanın.')
+            $cleanOutput = [regex]::Replace([string]$installOutput, '\x1B\[[0-?]*[ -/]*[@-~]', '').Trim()
+            if ($cleanOutput.Length -gt 1200) { $cleanOutput = $cleanOutput.Substring($cleanOutput.Length-1200) }
+            Result 'Failed' ('WinGet kurulum çıkış kodu: ' + $installExit + '. ' + $cleanOutput)
         }
         return
     }

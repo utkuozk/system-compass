@@ -1,14 +1,16 @@
-SYSTEM COMPASS 1.8
+SYSTEM COMPASS 1.9
 
-NORMAL KURULUM: System-Compass-Setup-1.8.0.exe dosyasını indirip açın; Türkçe/English seçip sihirbazı tamamlayın. ZIP açmak veya .NET'i ayrıca kurmak gerekmez. Masaüstü/Başlat menüsündeki System Compass kısayolunu kullanın. Windows Yüklü uygulamalar bölümünden kaldırabilirsiniz; raporlar korunur. Önce devam eden bakımın bitmesini bekleyip uygulamayı kapatın. Kurulum otomatik yeniden başlatma veya bakım başlatmaz. 64-bit Windows 10/11 gerekir. Kurulum dosyası kod imzalı değildir.
+NORMAL KURULUM: System-Compass-Setup-1.9.0.exe dosyasını indirip açın; Türkçe/English seçip sihirbazı tamamlayın. ZIP açmak veya .NET'i ayrıca kurmak gerekmez. Masaüstü/Başlat menüsündeki System Compass kısayolunu kullanın. Windows Yüklü uygulamalar bölümünden kaldırabilirsiniz; raporlar korunur. Önce devam eden bakımın bitmesini bekleyip uygulamayı kapatın. Kurulum otomatik yeniden başlatma veya bakım başlatmaz. 64-bit Windows 10/11 gerekir. Kurulum dosyası kod imzalı değildir.
 
-NORMAL INSTALLATION: Download System-Compass-Setup-1.8.0.exe and follow the Turkish/English wizard. Runtime included; no ZIP extraction or separate .NET install. Desktop/Start menu shortcuts and Windows Installed apps uninstall are provided. Saved reports/settings are preserved. Wait for maintenance and close the app before setup/removal. No automatic restart. Requires 64-bit Windows 10/11. Installer is unsigned. The ZIP instructions below apply only to older updater compatibility/advanced portable use.
+NORMAL INSTALLATION: Download System-Compass-Setup-1.9.0.exe and follow the Turkish/English wizard. Runtime included; no ZIP extraction or separate .NET install. Desktop/Start menu shortcuts and Windows Installed apps uninstall are provided. Saved reports/settings are preserved. Wait for maintenance and close the app before setup/removal. No automatic restart. Requires 64-bit Windows 10/11. Installer is unsigned. The ZIP instructions below apply only to older updater compatibility/advanced portable use.
 
 Pencere ekrana uygun boyutta açılır. Üst çubuktan taşıyabilir, küçültebilir, büyütebilir veya kapatabilirsiniz. Kenarlardan boyutlandırılabilir. Güncelleme ekranları yenilendi; yazılım sorgusu sürücü sorgusundan bağımsız çalışır. Kurulumlar ve onarım işlemleri çakışmaması için sırayla yürür.
 
 Extract the package and run SistemPusulasi.exe, or SistemPusulasi-Kur.exe to install. Requires .NET 8 Desktop Runtime. Turkish/English is available in Maintenance settings. The application is unsigned.
 
-139 automated checks passed locally; tests do not perform real installations or repairs. Direct software updates support eligible WinGet MSIX packages only. EXE/MSI and firmware installations are unsupported. The application does not automatically reboot. Active servicing continues in a separate worker even if the UI closes. Windows/WinGet manages download caches; do not manually delete them.
+Automated fixtures do not perform real installations or repairs. Direct software updates support verified WinGet MSIX, MSI, WiX, Burn and Inno packages with restart suppression. Other installer types and firmware installations are unsupported. The application does not automatically reboot. Active servicing continues in a separate worker even if the UI closes. Windows/WinGet manages download caches; do not manually delete them.
 
 GitHub repository: https://github.com/utkuozk/system-compass
 The default release feed is utkuozk/system-compass. New releases appear after the GitHub workflow completes successfully. Source publication alone does not mean a downloadable release is ready.
+
+Select updates with checkboxes and use Update selected items. A separate progress window shows each result. Hide it to keep using other pages; closing the main app lets the current worker finish but stops launching the remaining queue. Setup English/Turkish is applied on next launch.

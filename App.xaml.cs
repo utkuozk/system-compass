@@ -26,7 +26,12 @@ public partial class App : Application
             if(e.Args.Contains("--self-test")) { try { SelfTests.Run(); var concurrencyResults=await InventoryConcurrencyTests.Run(); File.AppendAllLines(Path.Combine(AppContext.BaseDirectory,"self-test-results.txt"),concurrencyResults); Shutdown(0); } catch(Exception testError) { File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"self-test-results.txt"),testError.ToString()); Shutdown(1); } return; }
             if(e.Args.Contains("--demo")) { OpenWindow(true); return; }
             LocalStore.Initialize();
-            L10n.SetLanguage(LocalStore.LoadSettings().Language);
+            var appSettings=LocalStore.LoadSettings();
+            InstallerLanguage.ApplyPending(
+                Path.Combine(AppContext.BaseDirectory,"installer-language.txt"),
+                Path.Combine(LocalStore.Root,"installer-language-applied.txt"),
+                appSettings,LocalStore.SaveSettings);
+            L10n.SetLanguage(appSettings.Language);
             if(e.Args.Length==2 && e.Args[0]=="--antivirus" && e.Args[1] is "update" or "quick" or "full") {
                 if(!IsAdmin()){Elevate("--antivirus "+e.Args[1]);Shutdown();return;}
                 await RunAntivirusWorker(e.Args[1]); Shutdown();return;

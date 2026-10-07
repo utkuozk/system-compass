@@ -1,8 +1,8 @@
 ; Build with Inno Setup 6.3+ after publishing the self-contained win-x64 app.
-; ISCC.exe /DAppVersion=1.8.0 /DPublishDir="C:\path\setup-app" /DOutputDir="C:\path\artifacts" SystemCompass.iss
+; ISCC.exe /DAppVersion=1.9.0 /DPublishDir="C:\path\setup-app" /DOutputDir="C:\path\artifacts" SystemCompass.iss
 ; No runtime downloads, background maintenance, or forced process termination.
 #ifndef AppVersion
-  #define AppVersion "1.8.0"
+  #define AppVersion "1.9.0"
 #endif
 #ifndef PublishDir
   #define PublishDir SourcePath + "..\artifacts\setup-app"
@@ -78,12 +78,16 @@ Name: "desktopicon"; Description: "{cm:DesktopShortcut}"; GroupDescription: "{cm
 [Files]
 ; Exclude development/test output even if present in the publish directory.
 ; No restartreplace flag: an in-use file must never be deferred to a reboot.
-Source: "{#PublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb,self-test-results.txt,SistemPusulasi-Kur.exe"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb,self-test-results.txt,SistemPusulasi-Kur.exe,ui-previews\*"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{commonprograms}\System Compass\System Compass"; Filename: "{app}\SistemPusulasi.exe"; WorkingDir: "{app}"
 Name: "{commonprograms}\System Compass\{cm:UninstallProgram,System Compass}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\System Compass"; Filename: "{app}\SistemPusulasi.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+
+[UninstallDelete]
+; This setup-owned handoff marker contains no user data.
+Type: files; Name: "{app}\installer-language.txt"
 
 [Run]
 ; A normal interactive launch: it does not enable a schedule or start maintenance.
@@ -123,6 +127,18 @@ end;
 procedure InitializeWizard;
 begin
   WizardForm.WelcomeLabel2.Caption := WizardForm.WelcomeLabel2.Caption + #13#10#13#10 + CustomMessage('SafeInstallInfo');
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Token: String;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    Token := '{#AppVersion}-' + GetDateTimeString('yyyymmddhhnnsszzz', '', '');
+    if not SaveStringToFile(ExpandConstant('{app}\installer-language.txt'), ActiveLanguage + '|' + Token, False) then
+      RaiseException('The selected setup language could not be saved for System Compass.');
+  end;
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;

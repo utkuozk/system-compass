@@ -125,7 +125,7 @@ public static class UpdateInstaller
                 !root.TryGetProperty("Status", out var status) || status.ValueKind != JsonValueKind.String ||
                 !root.TryGetProperty("Detail", out var detail) || detail.ValueKind != JsonValueKind.String ||
                 !root.TryGetProperty("RebootRequired", out var reboot) || reboot.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
-                return new("Unknown", "Kurulum tamamlanma sonucu doğrulanamadı. " + Clip(error));
+                return new("Unknown", "Kurulum tamamlanma sonucu doğrulanamadı. " + "Worker exit: " + exitCode + ". " + Clip(error));
             var state = status.GetString() ?? "";
             if (state is not ("Installed" or "Failed" or "Rejected" or "Busy" or "Unknown"))
                 return new("Unknown", "Kurulum geçerli bir tamamlanma durumu bildirmedi.");
@@ -134,7 +134,7 @@ public static class UpdateInstaller
                 return new("Unknown", "Kurulumun seçilen güncelleme için başarıyla tamamlandığı doğrulanamadı.");
             return new(state, Clip(detail.GetString() ?? ""), reboot.GetBoolean());
         }
-        catch { return new("Unknown", "Kurulum sonucu okunamadı. " + Clip(error)); }
+        catch { return new("Unknown", "Kurulum sonucu okunamadı. " + "Worker exit: " + exitCode + ". " + Clip(error)); }
     }
 
     private static async Task<string> ReadOutputAsync(StreamReader reader, Action<string>? progress)
