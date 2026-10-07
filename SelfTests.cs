@@ -20,6 +20,14 @@ internal static class SelfTests
         Check(smallWorkArea.Contains(fitted) && fitted.Height<720,"Initial window including caption fits a small work area");
         var offsetWorkArea=new System.Windows.Rect(-1920,40,1920,1040);
         Check(offsetWorkArea.Contains(MainWindow.FitWindow(offsetWorkArea,1240,880)),"Window fitting respects work-area origin");
+        Check(GitHubReleaseClient.IsSetupAsset("System-Compass-Setup-1.8.0.exe",new Version(1,8,0)),"Exact versioned Setup EXE is supported");
+        Check(!GitHubReleaseClient.IsSetupAsset("System-Compass-Setup-1.8.0.exe",new Version(1,9,0)),"Setup version mismatch is rejected");
+        Check(GitHubReleaseClient.IsAllowedDownloadUrl("https://github.com/example/pusula/releases/download/v1.8.0/System-Compass-Setup-1.8.0.exe","example/pusula",new Version(1,8,0)),"Setup download must match repository and version");
+        var setupJson=System.Text.Json.JsonSerializer.Serialize(new {draft=false,prerelease=false,tag_name="v1.8.0",html_url="https://github.com/example/pusula/releases/tag/v1.8.0",assets=new[]{new{name="System-Compass-Setup-1.8.0.exe",digest="sha256:"+new string('a',64),state="uploaded",size=120000000L,browser_download_url="https://github.com/example/pusula/releases/download/v1.8.0/System-Compass-Setup-1.8.0.exe"},new{name="Sistem-Pusulasi-1.8.zip",digest="sha256:"+new string('b',64),state="uploaded",size=1000L,browser_download_url="https://github.com/example/pusula/releases/download/v1.8.0/Sistem-Pusulasi-1.8.zip"}}});
+        using(var setupDoc=System.Text.Json.JsonDocument.Parse(setupJson)) {
+            var setupRelease=GitHubReleaseClient.ParseLatestRelease(setupDoc.RootElement,"example/pusula",new Version(1,7,0));
+            Check(setupRelease.Release?.DownloadUrl.EndsWith(".exe")==true,"Official Setup is preferred over compatibility ZIP");
+        }
         var settings=new AppSettings();
         Check(settings.AutoRepair && settings.DeepScanIntervalDays==7,"Safe default interval and auto-repair preference");
         Check(LocalStore.DeepDue(settings,Array.Empty<ScanReport>()),"First deep scan due");

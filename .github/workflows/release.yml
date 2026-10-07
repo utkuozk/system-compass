@@ -36,6 +36,26 @@ jobs:
             [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName,[ref]$tokens,[ref]$errors)
             if ($errors.Count) { throw "PowerShell syntax errors: $($file.Name)" }
           }
+      - name: Build standalone Windows installer
+        shell: pwsh
+        run: |
+          [xml]$project=Get-Content SistemPusulasi.csproj
+          $version=[string]$project.Project.PropertyGroup.Version
+          dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o artifacts/setup-app
+          if ($LASTEXITCODE -ne 0) { throw 'Self-contained publish failed' }
+          Copy-Item KULLANIM.txt artifacts/setup-app/KULLANIM.txt
+          $p=Start-Process artifacts/setup-app/SistemPusulasi.exe -ArgumentList '--self-test' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content artifacts/setup-app/self-test-results.txt; throw 'Standalone self-tests failed' }
+          $compiler=Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path $compiler)) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed' }
+          }
+          & $compiler "/DAppVersion=$version" "/DPublishDir=$((Resolve-Path artifacts/setup-app).Path)" "/DOutputDir=$((Resolve-Path artifacts).Path)" installer/SystemCompass.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Setup compilation failed' }
+          $setup="artifacts/System-Compass-Setup-$version.exe"
+          if (-not (Test-Path $setup)) { throw 'Setup EXE missing' }
+          "$((Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($setup))" | Set-Content "$setup.sha256" -Encoding utf8
       - name: Package and publish
         shell: pwsh
         env:
@@ -53,5 +73,5 @@ jobs:
           "$digest  $asset" | Set-Content "artifacts/$asset.sha256" -Encoding utf8
           gh release view "v$version" --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -eq 0) { throw 'Release already exists; increment the project version.' }
-          gh release create "v$version" "artifacts/$asset" "artifacts/$asset.sha256" --target $env:GITHUB_SHA --title "System Compass $version" --notes-file RELEASE-NOTES.md --repo $env:GITHUB_REPOSITORY
+          gh release create "v$version" "artifacts/System-Compass-Setup-$version.exe" "artifacts/System-Compass-Setup-$version.exe.sha256" "artifacts/$asset" "artifacts/$asset.sha256" --target $env:GITHUB_SHA --title "System Compass $version" --notes-file RELEASE-NOTES.md --repo $env:GITHUB_REPOSITORY
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

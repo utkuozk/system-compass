@@ -1,4 +1,8 @@
-SYSTEM COMPASS 1.7
+SYSTEM COMPASS 1.8
+
+NORMAL KURULUM: System-Compass-Setup-1.8.0.exe dosyasını indirip açın; Türkçe/English seçip sihirbazı tamamlayın. ZIP açmak veya .NET'i ayrıca kurmak gerekmez. Masaüstü/Başlat menüsündeki System Compass kısayolunu kullanın. Windows Yüklü uygulamalar bölümünden kaldırabilirsiniz; raporlar korunur. Önce devam eden bakımın bitmesini bekleyip uygulamayı kapatın. Kurulum otomatik yeniden başlatma veya bakım başlatmaz. 64-bit Windows 10/11 gerekir. Kurulum dosyası kod imzalı değildir.
+
+NORMAL INSTALLATION: Download System-Compass-Setup-1.8.0.exe and follow the Turkish/English wizard. Runtime included; no ZIP extraction or separate .NET install. Desktop/Start menu shortcuts and Windows Installed apps uninstall are provided. Saved reports/settings are preserved. Wait for maintenance and close the app before setup/removal. No automatic restart. Requires 64-bit Windows 10/11. Installer is unsigned. The ZIP instructions below apply only to older updater compatibility/advanced portable use.
 
 Pencere ekrana uygun boyutta açılır. Üst çubuktan taşıyabilir, küçültebilir, büyütebilir veya kapatabilirsiniz. Kenarlardan boyutlandırılabilir. Güncelleme ekranları yenilendi; yazılım sorgusu sürücü sorgusundan bağımsız çalışır. Kurulumlar ve onarım işlemleri çakışmaması için sırayla yürür.
 

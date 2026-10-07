@@ -7,6 +7,7 @@ namespace SistemPusulasi;
 
 public partial class App : Application
 {
+    private Mutex? runningMarker;
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -14,6 +15,14 @@ public partial class App : Application
         ShutdownMode=ShutdownMode.OnExplicitShutdown;
         DispatcherUnhandledException += (_,args) => { UiDialogs.Show(args.Exception.Message,"Sistem Pusulası"); args.Handled=true; };
         try {
+            if(e.Args.Length==1 && e.Args[0]=="--uninstall-schedule") {
+                var result=SchedulerService.Remove();
+                Shutdown(result is "Günlük tarama görevi kaldırıldı." or "Kurulu zamanlama görevi bulunamadı." or "Görev sahiplik doğrulamasından geçmedi; korunuyor."?0:1);return;
+            }
+            if(!e.Args.Contains("--self-test")) {
+                runningMarker=new Mutex(false,@"Global\SystemCompassRunning");
+                Exit+=(_,_)=>runningMarker.Dispose();
+            }
             if(e.Args.Contains("--self-test")) { try { SelfTests.Run(); var concurrencyResults=await InventoryConcurrencyTests.Run(); File.AppendAllLines(Path.Combine(AppContext.BaseDirectory,"self-test-results.txt"),concurrencyResults); Shutdown(0); } catch(Exception testError) { File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"self-test-results.txt"),testError.ToString()); Shutdown(1); } return; }
             if(e.Args.Contains("--demo")) { OpenWindow(true); return; }
             LocalStore.Initialize();

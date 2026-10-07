@@ -28,7 +28,7 @@ public sealed record PackageProgress(long Bytes,long Total,string Stage);
 // Public releases only: no tokens, shell execution, installation, or unchecked URLs.
 public static class GitHubReleaseClient
 {
-    internal const long MaxPackageBytes = 100L * 1024 * 1024;
+    internal const long MaxPackageBytes = 300L * 1024 * 1024;
     private const int MaxJsonBytes = 2 * 1024 * 1024;
     private static readonly string[] RequiredFiles =
     ["SistemPusulasi.exe", "SistemPusulasi-Kur.exe", "SistemPusulasi.dll",
@@ -94,10 +94,11 @@ public static class GitHubReleaseClient
         EnsureNoReparsePoint(updates);
         string staging = Path.Combine(updates, version.ToString(3) + "-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(staging);
-        string archivePath = Path.Combine(staging, "package.zip");
+        bool setup=IsSetupAsset(GetUrlSegments(release.DownloadUrl)[5],version);
+        string archivePath = Path.Combine(staging, setup?"System-Compass-Setup.exe":"package.zip");
         try
         {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(10));
             progress?.Report(new PackageProgress(0,release.Size,"downloading"));
             using var response = await OpenDownloadAsync(new Uri(release.DownloadUrl), repo, version, timeout.Token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
@@ -122,6 +123,7 @@ public static class GitHubReleaseClient
                     throw new InvalidDataException("Paketin SHA-256 doğrulaması başarısız. Kurulum hazırlanmadı.");
             }
             progress?.Report(new PackageProgress(release.Size,release.Size,"verifying"));
+            if(setup) {progress?.Report(new PackageProgress(release.Size,release.Size,"ready"));return staging;}
             using (var zip = ZipFile.OpenRead(archivePath))
             {
                 var entries = ValidateArchive(zip, version);
@@ -187,7 +189,8 @@ public static class GitHubReleaseClient
         if (!IsReleasePageUrl(page, repo, version)) throw new InvalidDataException("Sürüm sayfası bu depoya ait değil.");
         if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
             return Result("Bu sürümde kurulum ZIP paketi bulunamadı.");
-        var matches = assets.EnumerateArray().Where(a => IsAssetName(GetString(a, "name"), version)).ToList();
+        var setupMatches=assets.EnumerateArray().Where(a=>IsSetupAsset(GetString(a,"name"),version)).ToList();
+        var matches=setupMatches.Count>0?setupMatches:assets.EnumerateArray().Where(a => IsAssetName(GetString(a, "name"), version)).ToList();
         if (matches.Count != 1) return Result("Sürüm için tek bir uygun kurulum ZIP paketi bulunamadı.");
         var asset = matches[0];
         string digest = GetString(asset, "digest");
@@ -195,7 +198,7 @@ public static class GitHubReleaseClient
             return Result("GitHub paketinin SHA-256 doğrulama bilgisi eksik. Doğrulanmış paket yayımlanmalıdır.");
         if (GetString(asset, "state") != "uploaded" || !asset.TryGetProperty("size", out var sizeElement)
             || !sizeElement.TryGetInt64(out long size) || size <= 0 || size > MaxPackageBytes)
-            return Result("Paket yükleme durumu veya boyutu geçersiz (en fazla 100 MB).");
+            return Result("Paket yükleme durumu veya boyutu geçersiz (en fazla 300 MB).");
         string download = GetString(asset, "browser_download_url");
         if (!IsAllowedDownloadUrl(download, repo, version)) throw new InvalidDataException("Paket indirme adresi doğrulanamadı.");
         if (GetUrlSegments(page)[4] != GetUrlSegments(download)[4] || GetUrlSegments(page)[4] != tag)
@@ -227,7 +230,8 @@ public static class GitHubReleaseClient
     private static bool SameRepository(string[] segments, string repository) =>
         string.Equals(segments[0] + "/" + segments[1], repository, StringComparison.OrdinalIgnoreCase);
     private static string[] GetUrlSegments(string url) => new Uri(url).AbsolutePath.TrimStart('/').Split('/');
-    private static bool IsAssetName(string name, Version version) => name == $"Sistem-Pusulasi-{PackageVersion(version)}.zip" || name == $"Sistem-Pusulasi-{version.ToString(3)}.zip";
+    internal static bool IsSetupAsset(string name,Version version)=>name==$"System-Compass-Setup-{version.ToString(3)}.exe";
+    private static bool IsAssetName(string name, Version version) => IsSetupAsset(name,version) || name == $"Sistem-Pusulasi-{PackageVersion(version)}.zip" || name == $"Sistem-Pusulasi-{version.ToString(3)}.zip";
     private static string PackageVersion(Version version) => version.Build == 0 ? version.ToString(2) : version.ToString(3);
     private static bool IsSha256(string value) => value != null && Regex.IsMatch(value, @"\A[0-9a-fA-F]{64}\z");
     private static bool IsNewer(Version version, Version current) => new Version(version.Major, version.Minor, Math.Max(0, version.Build), Math.Max(0, version.Revision)) > new Version(current.Major, current.Minor, Math.Max(0, current.Build), Math.Max(0, current.Revision));

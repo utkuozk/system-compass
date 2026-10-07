@@ -65,7 +65,8 @@ public partial class MainWindow
                 AppUpdateProgressText.Text=p.Stage=="verifying"?T("Paketin bütünlüğü doğrulanıyor…"):p.Stage=="ready"?T("Paket doğrulandı. Kurulum açılıyor…"):F("İndiriliyor: %{0:0} ({1:0.0} / {2:0.0} MB)",AppUpdateProgress.Value,p.Bytes/1048576d,p.Total/1048576d);
             });
             var directory=await GitHubReleaseClient.DownloadAsync(githubRelease,checkedRepository,progress);
-            Process.Start(new ProcessStartInfo(Path.Combine(directory,"SistemPusulasi-Kur.exe")) {UseShellExecute=true});
+            var setupPath=Path.Combine(directory,"System-Compass-Setup.exe");
+            Process.Start(new ProcessStartInfo(File.Exists(setupPath)?setupPath:Path.Combine(directory,"SistemPusulasi-Kur.exe")) {UseShellExecute=true});
             Application.Current.Shutdown();
         } catch(Exception ex){GitHubStatus.Text=F("Güncelleme kurulmadı: {0}",DynamicTranslations.KnownText(ex.Message));}
         finally{githubBusy=false;GitHubCheckButton.IsEnabled=true;GitHubInstallButton.IsEnabled=githubRelease!=null;AppUpdateProgress.Visibility=Visibility.Collapsed;AppUpdateProgressText.Visibility=Visibility.Collapsed;}

@@ -19,7 +19,7 @@ public static class UiTranslations
         ("Bakım ayarları", "Maintenance settings"),
         ("Yerel ve özel", "Local and private"),
         ("Bakım raporların bu bilgisayarda saklanır.", "Your maintenance reports are stored on this computer."),
-        ("SYSTEM COMPASS   /   v1.7", "SYSTEM COMPASS   /   v1.7"),
+        ("SYSTEM COMPASS   /   v1.8", "SYSTEM COMPASS   /   v1.8"),
         ("SİSTEM PUSULASI", "SYSTEM COMPASS"),
         ("Bilgisayarının durumu", "Your computer's status"),
         ("Windows sağlığı, bakım geçmişi ve güncellemeler tek bir yerde.", "Windows health, maintenance history and updates in one place."),
